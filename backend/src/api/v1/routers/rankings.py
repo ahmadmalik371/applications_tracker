@@ -8,10 +8,12 @@ from pydantic import BaseModel
 from src.api.dependencies import get_current_user, get_db
 from src.models import User, Candidate, Job
 from src.services.ranking import RankingService
+from src.services.explainability import ExplainabilityService
 
 
 router = APIRouter(prefix="/api/v1/rankings", tags=["rankings"])
 ranking_service = RankingService()
+explainability_service = ExplainabilityService()
 
 
 # Pydantic schemas
@@ -35,6 +37,17 @@ class JobRankingResponse(BaseModel):
     features: dict
     embedding_similarity: float
     breakdown: dict
+
+
+class ExplanationResponse(BaseModel):
+    summary: str
+    match_score: float
+    confidence: float
+    strengths: List[str]
+    weaknesses: List[str]
+    skill_analysis: dict
+    recommendations: List[str]
+    next_steps: List[str]
 
 
 # Endpoints
@@ -131,3 +144,39 @@ async def get_match_score(
         "job_title": job.title,
         **score_data,
     }
+
+
+@router.get("/explain/{candidate_id}/{job_id}", response_model=ExplanationResponse)
+async def get_explanation(
+    candidate_id: uuid.UUID,
+    job_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Get AI-generated explanation for candidate-job match.
+    
+    Returns summary, strengths, weaknesses, skill analysis, and recommendations.
+    """
+    # Verify candidate and job exist and belong to user's organization
+    candidate_result = await session.execute(
+        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+    )
+    candidate = candidate_result.scalar_one_or_none()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    job_result = await session.execute(
+        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+    )
+    job = job_result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Calculate score and generate explanation
+    score_data = await ranking_service.calculate_match_score(candidate, job)
+    explanation = await explainability_service.generate_explanation(
+        candidate, job, score_data
+    )
+
+    return explanation
