@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.dependencies import get_current_user, require_role, get_db
 from src.api.v1.schemas.candidates import (
     JobCreate, JobResponse, JobUpdate,
@@ -15,7 +16,7 @@ from src.services.candidates import (
     create_application, get_application, list_applications, update_application,
 )
 from src.services.upload import save_resume_file
-from src.services.search import find_similar_candidates, find_matching_jobs
+from src.services.search import find_similar_candidates, find_matching_jobs, hybrid_search_candidates
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
@@ -294,3 +295,24 @@ async def get_matching_jobs(
         db, candidate_id, current_user.organization_id, limit=limit
     )
     return {"candidate_id": candidate_id, "matching_jobs": matching_jobs}
+
+
+@router.get("/search/hybrid")
+async def hybrid_search(
+    q: str = Query(..., min_length=1, max_length=500),
+    limit: int = Query(20, ge=1, le=100),
+    semantic_weight: float = Query(0.6, ge=0, le=1),
+    keyword_weight: float = Query(0.4, ge=0, le=1),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hybrid candidate search combining PostgreSQL full-text and pgvector semantic similarity."""
+    results = await hybrid_search_candidates(
+        db,
+        q,
+        current_user.organization_id,
+        limit=limit,
+        semantic_weight=semantic_weight,
+        keyword_weight=keyword_weight,
+    )
+    return {"query": q, "count": len(results), "results": results}

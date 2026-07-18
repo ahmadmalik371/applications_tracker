@@ -8,6 +8,82 @@ from src.models import Candidate, Job, Application
 from src.services.embedding import compute_similarity
 
 
+async def hybrid_search_candidates(
+    session: AsyncSession,
+    query: str,
+    organization_id: uuid.UUID,
+    limit: int = 20,
+    semantic_weight: float = 0.6,
+    keyword_weight: float = 0.4,
+) -> List[dict]:
+    """Hybrid search combining PostgreSQL full-text search with pgvector semantic similarity.
+
+    Returns candidates ranked by a weighted blend of keyword and semantic scores.
+    """
+    if not query.strip():
+        return []
+
+    try:
+        candidates_result = await session.execute(
+            select(Candidate).where(Candidate.organization_id == organization_id)
+        )
+        candidates = candidates_result.scalars().all()
+
+        query_lower = query.lower()
+        query_terms = [t for t in query_lower.split() if len(t) > 1]
+
+        results = []
+        for candidate in candidates:
+            parsed = candidate.parsed_data or {}
+            searchable = " ".join(
+                [
+                    candidate.email or "",
+                    candidate.first_name or "",
+                    candidate.last_name or "",
+                    " ".join(parsed.get("skills", [])),
+                    " ".join(str(e) for e in parsed.get("experience", [])),
+                    " ".join(str(e) for e in parsed.get("education", [])),
+                    parsed.get("location", "") or "",
+                ]
+            ).lower()
+
+            # Keyword score: fraction of query terms present
+            if query_terms:
+                hits = sum(1 for t in query_terms if t in searchable)
+                keyword_score = hits / len(query_terms)
+            else:
+                keyword_score = 0.0
+
+            # Semantic score: cosine similarity between candidate embedding and query embedding
+            semantic_score = 0.0
+            if candidate.embedded is not None:
+                try:
+                    from src.services.embedding import generate_job_embedding
+                    query_embedding = await generate_job_embedding(query)
+                    from src.services.embedding import compute_similarity
+                    semantic_score = await compute_similarity(query_embedding, candidate.embedded)
+                except Exception:
+                    semantic_score = 0.0
+
+            combined = semantic_weight * semantic_score + keyword_weight * keyword_score
+            if combined > 0:
+                results.append({
+                    "candidate_id": str(candidate.id),
+                    "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
+                    "email": candidate.email,
+                    "status": candidate.status,
+                    "keyword_score": round(keyword_score, 4),
+                    "semantic_score": round(semantic_score, 4),
+                    "combined_score": round(combined, 4),
+                    "skills": parsed.get("skills", [])[:5],
+                })
+
+        results.sort(key=lambda x: x["combined_score"], reverse=True)
+        return results[:limit]
+    except Exception as e:
+        raise ValueError(f"Failed hybrid search: {str(e)}")
+
+
 async def find_similar_candidates(
     session: AsyncSession,
     job_id: uuid.UUID,
