@@ -90,6 +90,31 @@ def extract_skills(text: str) -> list[str]:
     return found_skills
 
 
+def extract_years_of_experience(experience: list) -> int:
+    """Extract total years of experience from a list of experience entries.
+
+    Accepts either structured dicts (with a ``duration`` key) or plain strings.
+    Returns 0 when no duration can be parsed.
+    """
+    if not experience:
+        return 0
+
+    total = 0
+    pattern = re.compile(r"(\d+)\s*(?:\+)?\s*(?:years?|yrs?)", re.IGNORECASE)
+
+    for entry in experience:
+        if isinstance(entry, dict):
+            duration = str(entry.get("duration", "")) + " " + str(entry.get("title", ""))
+        else:
+            duration = str(entry)
+
+        matches = pattern.findall(duration)
+        for value in matches:
+            total += int(value)
+
+    return total
+
+
 def extract_experience_level(text: str) -> str:
     """Estimate experience level from resume text."""
     text_lower = text.lower()

@@ -145,15 +145,110 @@ class RankingService:
         ranked.sort(key=lambda x: x["match_score"], reverse=True)
         return ranked
 
+    async def compare_candidates(
+        self,
+        session: AsyncSession,
+        candidate_ids: list[uuid.UUID],
+        job_id: uuid.UUID,
+        organization_id: uuid.UUID,
+    ) -> Dict[str, Any]:
+        """Compare multiple candidates side by side for a single job."""
+        job_result = await session.execute(
+            select(Job).where(Job.id == job_id).where(Job.organization_id == organization_id)
+        )
+        job = job_result.scalar_one_or_none()
+        if not job:
+            return {"job_id": str(job_id), "candidates": []}
+
+        candidates_result = await session.execute(
+            select(Candidate).where(Candidate.id.in_(candidate_ids)).where(
+                Candidate.organization_id == organization_id
+            )
+        )
+        candidates = candidates_result.scalars().all()
+
+        rows = []
+        for candidate in candidates:
+            score_data = await self.calculate_match_score(candidate, job)
+            parsed = candidate.parsed_data or {}
+            rows.append({
+                "candidate_id": str(candidate.id),
+                "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
+                "candidate_email": candidate.email,
+                "match_score": score_data["match_score"],
+                "confidence": score_data["confidence"],
+                "features": score_data["features"],
+                "embedding_similarity": score_data["embedding_similarity"],
+                "skills": parsed.get("skills", []),
+                "experience_years": self._years_from_parsed(parsed),
+                "education": parsed.get("education", []),
+                "location": parsed.get("location", ""),
+            })
+
+        rows.sort(key=lambda x: x["match_score"], reverse=True)
+        return {"job_id": str(job_id), "job_title": job.title, "candidates": rows}
+
+    async def filter_ranked_candidates(
+        self,
+        session: AsyncSession,
+        job_id: uuid.UUID,
+        organization_id: uuid.UUID,
+        min_score: Optional[float] = None,
+        max_score: Optional[float] = None,
+        required_skills: Optional[list[str]] = None,
+        limit: int = 100,
+    ) -> list[Dict[str, Any]]:
+        """Rank candidates then filter by score band and required skills."""
+        ranked = await self.rank_candidates_for_job(
+            session, job_id, organization_id, limit=limit
+        )
+        if min_score is not None:
+            ranked = [r for r in ranked if r["match_score"] >= min_score]
+        if max_score is not None:
+            ranked = [r for r in ranked if r["match_score"] <= max_score]
+        if required_skills:
+            wanted = {s.lower() for s in required_skills}
+            kept = []
+            for r in ranked:
+                skills = {s.lower() for s in r.get("features", {}).get("skills", [])}
+                if wanted.issubset(skills):
+                    kept.append(r)
+            ranked = kept
+        return ranked
+
+    @staticmethod
+    def _years_from_parsed(parsed: dict) -> int:
+        from src.services.parsing import extract_years_of_experience
+        return extract_years_of_experience(parsed.get("experience", []))
+
+    @staticmethod
+    def export_rankings(ranked: list[Dict[str, Any]], fmt: str = "csv") -> str:
+        """Serialize a ranked list to CSV or JSON for download."""
+        import json
+        if fmt == "json":
+            return json.dumps(ranked, indent=2, default=str)
+
+        import csv
+        import io
+        if not ranked:
+            return ""
+        fields = list(ranked[0].keys())
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=fields)
+        writer.writeheader()
+        for row in ranked:
+            writer.writerow({k: row.get(k, "") for k in fields})
+        return buf.getvalue()
+
     async def _calculate_embedding_similarity(
         self, candidate: Candidate, job: Job
     ) -> float:
         """Calculate cosine similarity between candidate and job embeddings."""
-        if not candidate.embedding or not job.embedding:
+        if not candidate.embedded or not job.embedding:
             return 0.5  # Default neutral similarity if embeddings are missing
 
         # Embeddings are stored as vectors; calculate cosine similarity
-        similarity = self._cosine_similarity(candidate.embedding, job.embedding)
+        similarity = self._cosine_similarity(candidate.embedded, job.embedding)
         return max(0.0, min(1.0, similarity))  # Clamp to 0-1
 
     def _cosine_similarity(self, vec1: list, vec2: list) -> float:
@@ -187,7 +282,7 @@ class RankingService:
             confidence_factors.append(0.2)
 
         # Factor 2: Embedding availability
-        if candidate.embedding and job.embedding:
+        if candidate.embedded and job.embedding:
             confidence_factors.append(1.0)
         else:
             confidence_factors.append(0.6)

@@ -12,7 +12,7 @@ from src.api.v1.schemas.auth import (
     RefreshTokenRequest,
     TokenResponse,
 )
-from src.core.dependencies import get_db
+from src.api.dependencies import get_db
 from src.core.security import create_access_token, create_refresh_token
 from src.services.auth import (
     authenticate_user,

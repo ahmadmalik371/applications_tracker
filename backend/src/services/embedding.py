@@ -90,3 +90,18 @@ async def compute_similarity(embedding1: List[float], embedding2: List[float]) -
     similarity = dot_product / (mag1 * mag2)
     
     return similarity
+
+
+class EmbeddingService:
+    """Service wrapper for generating and comparing embeddings."""
+
+    async def generate_candidate_embedding(self, parsed_resume_data: dict) -> List[float]:
+        return await generate_candidate_embedding(parsed_resume_data)
+
+    async def generate_job_embedding(self, job_description: str) -> List[float]:
+        return await generate_job_embedding(job_description)
+
+    async def compute_similarity(
+        self, embedding1: List[float], embedding2: List[float]
+    ) -> float:
+        return compute_similarity(embedding1, embedding2)

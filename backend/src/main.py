@@ -34,12 +34,12 @@ def create_app() -> FastAPI:
     setup_exception_handlers(app)
 
     # Include routers
-    app.include_router(health.router, prefix=settings.API_V1_STR)
-    app.include_router(auth.router, prefix=settings.API_V1_STR)
-    app.include_router(candidates.router, prefix=settings.API_V1_STR)
-    app.include_router(rules.router, prefix=settings.API_V1_STR)
-    app.include_router(rankings.router, prefix=settings.API_V1_STR)
-    app.include_router(recruiter.router, prefix=settings.API_V1_STR)
+    app.include_router(health, prefix=settings.API_V1_STR)
+    app.include_router(auth, prefix=settings.API_V1_STR)
+    app.include_router(candidates, prefix=settings.API_V1_STR)
+    app.include_router(rules, prefix=settings.API_V1_STR)
+    app.include_router(rankings, prefix=settings.API_V1_STR)
+    app.include_router(recruiter, prefix=settings.API_V1_STR)
 
     return app
 
