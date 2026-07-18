@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.v1.routers import health, auth, candidates, rules, rankings
+from src.api.v1.routers import health, auth, candidates, rules, rankings, recruiter
 from src.core.config import get_settings
 from src.core.exceptions import setup_exception_handlers
 from src.core.logging import setup_logging
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(candidates.router, prefix=settings.API_V1_STR)
     app.include_router(rules.router, prefix=settings.API_V1_STR)
     app.include_router(rankings.router, prefix=settings.API_V1_STR)
+    app.include_router(recruiter.router, prefix=settings.API_V1_STR)
 
     return app
 
