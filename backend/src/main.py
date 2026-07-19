@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.v1.routers import (
     health, auth, candidates, rules, rankings, recruiter, dashboard,
     workflow, interviews, notifications, templates_router, analytics, reports,
-    websocket,
+    websocket, admin, ai_assistant, recommendations, ml_management, audit,
 )
 from src.core.config import get_settings
 from src.core.exceptions import setup_exception_handlers
@@ -48,6 +48,11 @@ def create_app() -> FastAPI:
     app.include_router(analytics, prefix=settings.API_V1_STR)
     app.include_router(reports, prefix=settings.API_V1_STR)
     app.include_router(websocket, prefix=settings.API_V1_STR)
+    app.include_router(admin, prefix=settings.API_V1_STR)
+    app.include_router(ai_assistant, prefix=settings.API_V1_STR)
+    app.include_router(recommendations, prefix=settings.API_V1_STR)
+    app.include_router(ml_management, prefix=settings.API_V1_STR)
+    app.include_router(audit, prefix=settings.API_V1_STR)
 
     return app
 

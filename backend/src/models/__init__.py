@@ -19,3 +19,14 @@ from .ranking_history import RankingHistory
 from .workflow import WorkflowStage, ApplicationWorkflowHistory
 from .interview import Interview, InterviewPanelist, InterviewFeedback, InterviewType, InterviewStatus
 from .notification import Notification, EmailTemplate, NotificationChannel, NotificationStatus
+from .admin import (
+    SaaSPlan, Subscription, FeatureFlag, OrgFeatureFlagOverride,
+    PlatformSetting, SystemAnnouncement, GlobalRole,
+    PlanTier, SubscriptionStatus,
+)
+from .audit import AuditLog
+from .activity import ActivityTimeline
+from .ai import (
+    AIRecommendationFeedback, ModelVersion, ModelEvaluation, BiasReport,
+    FeedbackRating,
+)

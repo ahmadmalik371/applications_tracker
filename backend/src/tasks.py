@@ -8,7 +8,7 @@ from src.services.candidates import update_candidate
 from src.services.embedding import generate_candidate_embedding, generate_job_embedding
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, queue="parsing")
 def parse_resume_task(self, candidate_id: str, resume_url: str):
     """Celery task to parse resume asynchronously."""
     try:
@@ -30,11 +30,17 @@ def parse_resume_task(self, candidate_id: str, resume_url: str):
             "parsed_data": parsed_data
         }
     except Exception as exc:
-        # Retry with exponential backoff
+        if self.request.retries >= self.max_retries:
+            from src.core.celery_app import send_to_dlq
+            send_to_dlq.delay(
+                "parse_resume_task", self.request.id,
+                [candidate_id, resume_url], {}, str(exc)
+            )
+            return {"status": "failed", "error": str(exc)}
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, queue="embeddings")
 def generate_candidate_embedding_task(self, candidate_id: str, parsed_data_json: str):
     """Celery task to generate candidate embedding."""
     try:
@@ -57,10 +63,17 @@ def generate_candidate_embedding_task(self, candidate_id: str, parsed_data_json:
             "embedding_generated": True
         }
     except Exception as exc:
+        if self.request.retries >= self.max_retries:
+            from src.core.celery_app import send_to_dlq
+            send_to_dlq.delay(
+                "generate_candidate_embedding_task", self.request.id,
+                [candidate_id, parsed_data_json], {}, str(exc)
+            )
+            return {"status": "failed", "error": str(exc)}
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, queue="embeddings")
 def generate_job_embedding_task(self, job_id: str, job_description: str):
     """Celery task to generate job embedding."""
     try:
@@ -82,6 +95,13 @@ def generate_job_embedding_task(self, job_id: str, job_description: str):
             "embedding_generated": True
         }
     except Exception as exc:
+        if self.request.retries >= self.max_retries:
+            from src.core.celery_app import send_to_dlq
+            send_to_dlq.delay(
+                "generate_job_embedding_task", self.request.id,
+                [job_id, job_description], {}, str(exc)
+            )
+            return {"status": "failed", "error": str(exc)}
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 
 

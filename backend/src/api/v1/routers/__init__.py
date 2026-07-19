@@ -11,5 +11,15 @@ from .notifications import router as notifications, templates_router
 from .analytics import router as analytics
 from .reports import router as reports
 from .websocket import router as websocket
+from .admin import router as admin
+from .ai_assistant import router as ai_assistant
+from .recommendations import router as recommendations
+from .ml_management import router as ml_management
+from .audit import router as audit
 
-__all__ = ["health", "auth", "candidates", "rules", "rankings", "recruiter", "dashboard", "workflow", "interviews", "notifications", "templates_router", "analytics", "reports", "websocket"]
+__all__ = [
+    "health", "auth", "candidates", "rules", "rankings", "recruiter",
+    "dashboard", "workflow", "interviews", "notifications", "templates_router",
+    "analytics", "reports", "websocket", "admin", "ai_assistant",
+    "recommendations", "ml_management", "audit",
+]

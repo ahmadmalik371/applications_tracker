@@ -2,6 +2,7 @@ import logging
 import sys
 from celery import Celery
 from celery.signals import after_setup_logger, after_setup_task_logger, worker_shutdown
+from kombu import Queue
 from pythonjsonlogger.json import JsonFormatter
 
 from src.core.config import get_settings
@@ -31,11 +32,30 @@ celery_app.conf.update(
     task_time_limit=300,
     task_soft_time_limit=240,
     task_ignore_result=False,
+    # Task routing by queue (Task 20)
+    task_routes={
+        "src.tasks.parse_resume_task": {"queue": "parsing"},
+        "src.tasks.generate_candidate_embedding_task": {"queue": "embeddings"},
+        "src.tasks.generate_job_embedding_task": {"queue": "embeddings"},
+        "src.services.notification_tasks.*": {"queue": "notifications"},
+    },
+    task_default_queue="default",
+    task_queues=(
+        Queue("default", routing_key="default.#"),
+        Queue("parsing", routing_key="parsing.#"),
+        Queue("embeddings", routing_key="embeddings.#"),
+        Queue("ranking", routing_key="ranking.#"),
+        Queue("notifications", routing_key="notifications.#"),
+        Queue("reports", routing_key="reports.#"),
+        Queue("ai_tasks", routing_key="ai_tasks.#"),
+    ),
+    # Dead Letter Queue: failed tasks are sent here after max retries
+    task_reject_on_worker_lost=True,
     # Beat configuration
     beat_schedule={
         "check-expired-sessions-every-hour": {
             "task": "src.core.celery_app.cleanup_expired_sessions",
-            "schedule": 3600.0,  # every hour
+            "schedule": 3600.0,
         }
     },
 )
@@ -84,12 +104,24 @@ def debug_task(self):
     bind=True,
     max_retries=5,
     default_retry_delay=60,
+    queue="default",
 )
 def cleanup_expired_sessions(self):
     """Dummy periodic task to clean up expired sessions."""
     logger = logging.getLogger(__name__)
     logger.info("Cleaning up expired sessions...")
     return "Expired sessions cleaned."
+
+
+@celery_app.task(bind=True, queue="default")
+def send_to_dlq(self, task_name: str, task_id: str, args: list, kwargs: dict, error: str):
+    """Send a permanently failed task to the Dead Letter Queue for inspection."""
+    logger = logging.getLogger("dlq")
+    logger.error(
+        "Task sent to DLQ: task_name=%s task_id=%s error=%s",
+        task_name, task_id, error,
+    )
+    return {"status": "dlq", "task_name": task_name, "task_id": task_id}
 
 
 # Graceful shutdown handling
