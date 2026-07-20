@@ -10,6 +10,7 @@ from src.core.config import get_settings
 from src.core.exceptions import setup_exception_handlers
 from src.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from src.core.logging import setup_logging
+from src.core.security_audit import security_headers_middleware
 
 logger = setup_logging()
 
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)
+    app.middleware("http")(security_headers_middleware)
 
     if settings.PROMETHEUS_ENABLED:
         from src.core.metrics import PrometheusMiddleware
