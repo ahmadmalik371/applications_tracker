@@ -67,7 +67,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
               ) : (
                 <div className="space-y-2">
-                  {plans?.map((plan: any) => (
+                  {plans?.map((plan: { id: string; name: string; max_users: number; max_ai_requests: number; max_storage_mb: number; price_cents: number; is_active: boolean }) => (
                     <div key={plan.id} className="flex items-center justify-between rounded-lg border border-zinc-100 p-3">
                       <div>
                         <span className="font-medium text-zinc-900">{plan.name}</span>
@@ -100,7 +100,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
               ) : (
                 <div className="space-y-2">
-                  {flags?.map((flag: any) => (
+                  {flags?.map((flag: { id: string; name: string; module: string; is_enabled: boolean }) => (
                     <div key={flag.id} className="flex items-center justify-between rounded-lg border border-zinc-100 p-3">
                       <div className="flex items-center gap-3">
                         <Flag className="h-4 w-4 text-zinc-400" />

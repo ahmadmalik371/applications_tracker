@@ -269,7 +269,7 @@ function NotificationsWidget({
   data,
   isLoading,
 }: {
-  data: { recent_candidates: any[]; recent_jobs: any[] } | undefined;
+  data: { recent_candidates: Array<{ id: string; first_name: string | null; last_name: string | null; email: string; status: string; created_at: string | null }>; recent_jobs: Array<{ id: string; title: string; status: string; location: string | null; created_at: string | null }> } | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {

@@ -98,7 +98,7 @@ export default function SearchPage() {
         {submitted && !isLoading && data && data.results.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-20 text-center">
             <FileText className="h-12 w-12 text-zinc-300" />
-            <p className="text-sm text-zinc-400">No candidates found for "{submitted}"</p>
+            <p className="text-sm text-zinc-400">No candidates found for &quot;{submitted}&quot;</p>
           </div>
         )}
 
