@@ -32,6 +32,30 @@ class Settings(BaseSettings):
     # File uploads
     UPLOADS_DIR: str = "./uploads"
 
+    # Security / CORS
+    CORS_ORIGINS: str = ""
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT: int = 100
+    RATE_LIMIT_AUTH: int = 10
+    RATE_LIMIT_UPLOAD: int = 20
+    RATE_LIMIT_AI: int = 50
+    RATE_LIMIT_SEARCH: int = 60
+    RATE_LIMIT_REPORTS: int = 10
+
+    # Storage
+    STORAGE_PROVIDER: str = "local"
+    STORAGE_S3_BUCKET: str = ""
+    STORAGE_S3_REGION: str = "us-east-1"
+    STORAGE_S3_ACCESS_KEY: str = ""
+    STORAGE_S3_SECRET_KEY: str = ""
+    STORAGE_S3_ENDPOINT_URL: str = ""
+
+    # Sentry
+    SENTRY_DSN: str = ""
+
+    # Monitoring
+    PROMETHEUS_ENABLED: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )

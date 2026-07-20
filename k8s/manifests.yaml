@@ -1,0 +1,398 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-ats
+  labels:
+    name: ai-ats
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-ats-config
+  namespace: ai-ats
+data:
+  ENVIRONMENT: "production"
+  DATABASE_URL: "postgresql+asyncpg://ats_user:ats_password@db-service:5432/ats_db"
+  REDIS_URL: "redis://redis-service:6379/0"
+  CORS_ORIGINS: "https://ats.example.com"
+  STORAGE_PROVIDER: "s3"
+  PROMETHEUS_ENABLED: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-ats-secrets
+  namespace: ai-ats
+type: Opaque
+stringData:
+  SECRET_KEY: "change-me-in-production"
+  POSTGRES_PASSWORD: "change-me"
+  SENTRY_DSN: ""
+  STORAGE_S3_ACCESS_KEY: ""
+  STORAGE_S3_SECRET_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: ai-ats
+  labels:
+    app: ai-ats
+    component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: backend
+    spec:
+      containers:
+        - name: backend
+          image: ai-ats-backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: ai-ats-config
+            - secretRef:
+                name: ai-ats-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: ai-ats
+spec:
+  selector:
+    app: ai-ats
+    component: backend
+  ports:
+    - port: 80
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: ai-ats
+  labels:
+    app: ai-ats
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ai-ats-backend:latest
+          command: ["celery", "-A", "src.core.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+          envFrom:
+            - configMapRef:
+                name: ai-ats-config
+            - secretRef:
+                name: ai-ats-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beat
+  namespace: ai-ats
+  labels:
+    app: ai-ats
+    component: beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: beat
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: beat
+    spec:
+      containers:
+        - name: beat
+          image: ai-ats-backend:latest
+          command: ["celery", "-A", "src.core.celery_app", "beat", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: ai-ats-config
+            - secretRef:
+                name: ai-ats-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: ai-ats
+  labels:
+    app: ai-ats
+    component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: web
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: web
+    spec:
+      containers:
+        - name: web
+          image: ai-ats-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://backend-service/api/v1"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: ai-ats
+spec:
+  selector:
+    app: ai-ats
+    component: web
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  namespace: ai-ats
+spec:
+  serviceName: db-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: db
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: db
+    spec:
+      containers:
+        - name: db
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ai-ats-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ai-ats-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "ats_db"
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: ai-ats
+spec:
+  selector:
+    app: ai-ats
+    component: db
+  ports:
+    - port: 5432
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: ai-ats
+  labels:
+    app: ai-ats
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-ats
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: ai-ats
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: ai-ats
+spec:
+  selector:
+    app: ai-ats
+    component: redis
+  ports:
+    - port: 6379
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: ai-ats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-hpa
+  namespace: ai-ats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-ats-ingress
+  namespace: ai-ats
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+    - hosts:
+        - ats.example.com
+      secretName: ai-ats-tls
+  rules:
+    - host: ats.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80

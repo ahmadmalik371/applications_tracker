@@ -8,6 +8,7 @@ from src.api.v1.routers import (
 )
 from src.core.config import get_settings
 from src.core.exceptions import setup_exception_handlers
+from src.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from src.core.logging import setup_logging
 
 logger = setup_logging()
@@ -24,15 +25,26 @@ def create_app() -> FastAPI:
         redoc_url=f"{settings.API_V1_STR}/redoc",
     )
 
+    allowed_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS else ["*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[o.strip() for o in allowed_origins],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Client-Info", "Apikey", "X-Request-ID"],
     )
 
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware)
+
+    if settings.PROMETHEUS_ENABLED:
+        from src.core.metrics import PrometheusMiddleware
+        app.add_middleware(PrometheusMiddleware)
+
     setup_exception_handlers(app)
+
+    from src.core.sentry import init_sentry
+    init_sentry()
 
     app.include_router(health, prefix=settings.API_V1_STR)
     app.include_router(auth, prefix=settings.API_V1_STR)
@@ -53,6 +65,10 @@ def create_app() -> FastAPI:
     app.include_router(recommendations, prefix=settings.API_V1_STR)
     app.include_router(ml_management, prefix=settings.API_V1_STR)
     app.include_router(audit, prefix=settings.API_V1_STR)
+
+    if settings.PROMETHEUS_ENABLED:
+        from src.core.metrics import get_metrics_router
+        app.include_router(get_metrics_router())
 
     return app
 
