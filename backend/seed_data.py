@@ -14,6 +14,7 @@ from src.models.job import Job, JobStatus
 from src.models.candidate import Candidate
 from src.models.application import Application
 from src.models.recruiter import Tag, CandidateTag
+from src.models.notification import Notification
 
 
 async def seed():
@@ -165,6 +166,28 @@ async def seed():
                 updated_at=now,
             )
             db.add(app)
+
+        # Notifications for the admin user
+        notif_data = [
+            ("New Application", f"{candidates_data[0][0]} {candidates_data[0][1]} applied for Senior Python Developer", False, 1),
+            ("Candidate Shortlisted", f"{candidates_data[5][0]} {candidates_data[5][1]} has been moved to Offer stage", False, 3),
+            ("Interview Scheduled", f"Interview with {candidates_data[2][0]} {candidates_data[2][1]} is scheduled for tomorrow", False, 5),
+            ("New Job Posted", "Senior Python Developer job has been published", True, 2),
+            ("Candidate Hired", f"{candidates_data[6][0]} {candidates_data[6][1]} has accepted the offer", True, 7),
+        ]
+        for title, message, read, days in notif_data:
+            now = datetime.utcnow() - timedelta(days=days)
+            notif = Notification(
+                organization_id=org.id,
+                user_id=user_ids[0],
+                channel="in_app",
+                title=title,
+                message=message,
+                status="sent",
+                read=read,
+                created_at=now,
+            )
+            db.add(notif)
 
         await db.commit()
         print("Seed data created successfully!")

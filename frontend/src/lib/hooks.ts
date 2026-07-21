@@ -121,7 +121,7 @@ export function useNotifications(limit = 20) {
     queryKey: ["notifications", limit],
     queryFn: async () => {
       const { data } = await apiClient.get<Notification[]>(
-        "/api/v1/notifications",
+        "/notifications",
         { params: { limit } }
       );
       return data;
@@ -135,7 +135,7 @@ export function useUnreadCount() {
     queryKey: ["notifications", "unread-count"],
     queryFn: async () => {
       const { data } = await apiClient.get<{ unread: number }>(
-        "/api/v1/notifications/unread-count"
+        "/notifications/unread-count"
       );
       return data;
     },

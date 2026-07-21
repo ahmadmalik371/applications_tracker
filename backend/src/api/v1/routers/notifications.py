@@ -9,7 +9,7 @@ from src.api.dependencies import get_current_user, get_db
 from src.models import User
 from src.services.notification import EmailTemplateService, NotificationService
 
-router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["notifications"])
 notification_service = NotificationService()
 template_service = EmailTemplateService()
 
@@ -143,7 +143,7 @@ async def mark_all_read(
 
 # --- Email template endpoints ---
 
-templates_router = APIRouter(prefix="/api/v1/email-templates", tags=["email-templates"])
+templates_router = APIRouter(prefix="/email-templates", tags=["email-templates"])
 
 
 @templates_router.post(
