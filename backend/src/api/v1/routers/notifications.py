@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
@@ -26,9 +26,9 @@ class NotificationCreate(BaseModel):
 
 
 class NotificationResponse(BaseModel):
-    id: str
-    organization_id: str
-    user_id: str | None
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    user_id: uuid.UUID | None
     channel: str
     title: str
     message: str
@@ -36,8 +36,7 @@ class NotificationResponse(BaseModel):
     read: bool
     created_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Email template schemas ---
@@ -51,8 +50,8 @@ class TemplateCreate(BaseModel):
 
 
 class TemplateResponse(BaseModel):
-    id: str
-    organization_id: str
+    id: uuid.UUID
+    organization_id: uuid.UUID
     name: str
     subject: str
     body: str
@@ -60,8 +59,7 @@ class TemplateResponse(BaseModel):
     is_active: bool
     created_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RenderRequest(BaseModel):
