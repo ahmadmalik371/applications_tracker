@@ -1,6 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
+from sqlalchemy import text
 
 from src.main import app
 from src.models.base import Base
@@ -36,6 +37,55 @@ async def session():
     SessionLocal = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
     )
-    async with SessionLocal() as db:
-        yield db
+    async with SessionLocal() as s:
+        yield s
     await engine.dispose()
+
+
+@pytest.fixture
+async def db(session: AsyncSession):
+    """Alias for the `session` fixture, for tests that use the name `db`."""
+    yield session
+
+
+@pytest.fixture
+async def test_org(db: AsyncSession):
+    """Create a test organization for unit tests using the in-memory session."""
+    from src.models import Organization, Role
+
+    org = Organization(name="Test Org Inc.")
+    db.add(org)
+    await db.flush()
+
+    role = Role(name="Company Admin", description="Default Company Admin role")
+    db.add(role)
+    await db.flush()
+
+    return org
+
+
+def _db_available() -> bool:
+    """Return True if the configured PostgreSQL database is reachable."""
+    import asyncio
+    from src.core.database import check_database_connection
+
+    try:
+        asyncio.run(check_database_connection())
+        return True
+    except Exception:
+        return False
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip tests that require a live PostgreSQL connection when none is available."""
+    if _db_available():
+        return
+    skip_marker = pytest.mark.skip(reason="No PostgreSQL database available")
+    db_test_ids = {
+        "test_database_connection",
+        "test_pgvector_extension_enabled",
+        "test_health_check_includes_database",
+    }
+    for item in items:
+        if any(test_id in item.nodeid for test_id in db_test_ids):
+            item.add_marker(skip_marker)

@@ -1,15 +1,13 @@
 import uuid
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job
-from src.services.recommendation import recommendation_engine
+from src.models import User
 from src.services.duplicate_detection import duplicate_detection_service
+from src.services.recommendation import recommendation_engine
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 

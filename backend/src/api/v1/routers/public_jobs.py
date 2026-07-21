@@ -2,18 +2,19 @@
 Public-facing job board and candidate application endpoints.
 No authentication required - candidates can browse jobs and apply.
 """
+
 import uuid
-from typing import Optional, List
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy import select, desc
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_db
-from src.models import Job, Candidate, Application
+from src.models import Job
+from src.services.candidates import create_application, create_candidate
 from src.services.upload import save_resume_file
-from src.services.candidates import create_candidate, create_application
 
 router = APIRouter(prefix="/public", tags=["Public"])
 
@@ -21,11 +22,11 @@ router = APIRouter(prefix="/public", tags=["Public"])
 class PublicJobResponse(BaseModel):
     id: str
     title: str
-    description: Optional[str] = None
-    location: Optional[str] = None
-    employment_type: Optional[str] = None
+    description: str | None = None
+    location: str | None = None
+    employment_type: str | None = None
     status: str
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -36,14 +37,14 @@ class ApplicationResponse(BaseModel):
     candidate_id: str
     job_id: str
     status: str
-    score: Optional[float] = None
-    created_at: Optional[datetime] = None
+    score: float | None = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
 
 
-@router.get("/jobs", response_model=List[PublicJobResponse])
+@router.get("/jobs", response_model=list[PublicJobResponse])
 async def list_public_jobs(
     db: AsyncSession = Depends(get_db),
 ):
@@ -80,7 +81,9 @@ async def get_public_job(
     )
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
     return PublicJobResponse(
         id=str(job.id),
         title=job.title,
@@ -92,13 +95,17 @@ async def get_public_job(
     )
 
 
-@router.post("/jobs/{job_id}/apply", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/jobs/{job_id}/apply",
+    response_model=ApplicationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def apply_to_job(
     job_id: uuid.UUID,
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: str = Form(...),
-    phone: Optional[str] = Form(None),
+    phone: str | None = Form(None),
     resume: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -109,7 +116,9 @@ async def apply_to_job(
     )
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
 
     # Create candidate
     candidate = await create_candidate(
@@ -126,6 +135,7 @@ async def apply_to_job(
 
     # Update candidate with resume URL
     from src.services.candidates import update_candidate
+
     await update_candidate(db, candidate.id, resume_url=resume_url)
 
     # Create application
@@ -141,6 +151,7 @@ async def apply_to_job(
 
     # Trigger async resume parsing and scoring
     from src.tasks import parse_resume_task
+
     parse_resume_task.delay(str(candidate.id), resume_url, str(job_id))
 
     return ApplicationResponse(

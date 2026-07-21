@@ -1,9 +1,9 @@
 import uuid
-from typing import Dict, Any, List, Optional
-from sqlalchemy import select, desc
+
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Interview, InterviewPanelist, InterviewFeedback
+from src.models import Interview, InterviewFeedback, InterviewPanelist
 
 
 class InterviewService:
@@ -17,13 +17,18 @@ class InterviewService:
         interview_type: str,
         scheduled_at: str,
         duration_minutes: int = 60,
-        location: Optional[str] = None,
-        meeting_link: Optional[str] = None,
-        panelist_ids: Optional[List[uuid.UUID]] = None,
-        created_by_id: Optional[uuid.UUID] = None,
+        location: str | None = None,
+        meeting_link: str | None = None,
+        panelist_ids: list[uuid.UUID] | None = None,
+        created_by_id: uuid.UUID | None = None,
     ) -> Interview:
         from datetime import datetime
-        dt = datetime.fromisoformat(scheduled_at) if isinstance(scheduled_at, str) else scheduled_at
+
+        dt = (
+            datetime.fromisoformat(scheduled_at)
+            if isinstance(scheduled_at, str)
+            else scheduled_at
+        )
 
         interview = Interview(
             application_id=application_id,
@@ -51,7 +56,7 @@ class InterviewService:
 
     async def get_interviews_for_application(
         self, session: AsyncSession, application_id: uuid.UUID
-    ) -> List[Interview]:
+    ) -> list[Interview]:
         result = await session.execute(
             select(Interview)
             .where(Interview.application_id == application_id)
@@ -62,7 +67,9 @@ class InterviewService:
     async def update_status(
         self, session: AsyncSession, interview_id: uuid.UUID, status: str
     ) -> Interview:
-        result = await session.execute(select(Interview).where(Interview.id == interview_id))
+        result = await session.execute(
+            select(Interview).where(Interview.id == interview_id)
+        )
         interview = result.scalar_one_or_none()
         if not interview:
             raise ValueError("Interview not found")
@@ -76,10 +83,10 @@ class InterviewService:
         interview_id: uuid.UUID,
         panelist_id: uuid.UUID,
         rating: int,
-        strengths: Optional[str] = None,
-        weaknesses: Optional[str] = None,
-        recommendation: Optional[str] = None,
-        notes: Optional[str] = None,
+        strengths: str | None = None,
+        weaknesses: str | None = None,
+        recommendation: str | None = None,
+        notes: str | None = None,
     ) -> InterviewFeedback:
         if rating < 1 or rating > 5:
             raise ValueError("Rating must be between 1 and 5")
@@ -99,7 +106,7 @@ class InterviewService:
 
     async def get_feedback(
         self, session: AsyncSession, interview_id: uuid.UUID
-    ) -> List[InterviewFeedback]:
+    ) -> list[InterviewFeedback]:
         result = await session.execute(
             select(InterviewFeedback)
             .where(InterviewFeedback.interview_id == interview_id)
@@ -109,8 +116,10 @@ class InterviewService:
 
     async def get_panelists(
         self, session: AsyncSession, interview_id: uuid.UUID
-    ) -> List[InterviewPanelist]:
+    ) -> list[InterviewPanelist]:
         result = await session.execute(
-            select(InterviewPanelist).where(InterviewPanelist.interview_id == interview_id)
+            select(InterviewPanelist).where(
+                InterviewPanelist.interview_id == interview_id
+            )
         )
         return list(result.scalars().all())

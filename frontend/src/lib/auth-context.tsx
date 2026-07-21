@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import apiClient from "./api-client";
 
 interface User {
@@ -32,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(false);
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem("access_token");
@@ -51,7 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    mountedRef.current = true;
+    if (mountedRef.current) {
+      fetchUser();
+    }
+    return () => { mountedRef.current = false; };
   }, [fetchUser]);
 
   const login = async (email: string, password: string) => {

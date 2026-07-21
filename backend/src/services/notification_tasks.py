@@ -2,6 +2,7 @@
 
 import json
 import logging
+
 from src.core.celery_app import app
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def send_notification_task(self, notification_id: str, channel: str, payload: st
 
     except Exception as exc:
         logger.error(f"Failed to send notification {notification_id}: {exc}")
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries))
+        raise self.retry(exc=exc, countdown=30 * (2**self.request.retries))
 
 
 def _send_email(data: dict):

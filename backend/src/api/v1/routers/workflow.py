@@ -1,13 +1,12 @@
 import uuid
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
 from src.models import User
 from src.services.workflow import WorkflowService
-
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["workflow"])
 workflow_service = WorkflowService()
@@ -18,7 +17,7 @@ class StageCreate(BaseModel):
     order: int = 0
     is_rejection_stage: bool = False
     is_hired_stage: bool = False
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class StageResponse(BaseModel):
@@ -28,7 +27,7 @@ class StageResponse(BaseModel):
     order: int
     is_rejection_stage: bool
     is_hired_stage: bool
-    color: Optional[str]
+    color: str | None
     is_active: bool
 
     class Config:
@@ -37,19 +36,19 @@ class StageResponse(BaseModel):
 
 class TransitionRequest(BaseModel):
     to_stage: str
-    note: Optional[str] = None
+    note: str | None = None
 
 
 class HistoryResponse(BaseModel):
     id: str
-    from_stage: Optional[str]
+    from_stage: str | None
     to_stage: str
-    changed_by_id: Optional[str]
-    note: Optional[str]
-    created_at: Optional[str]
+    changed_by_id: str | None
+    note: str | None
+    created_at: str | None
 
 
-@router.get("/stages", response_model=List[StageResponse])
+@router.get("/stages", response_model=list[StageResponse])
 async def list_stages(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -59,7 +58,9 @@ async def list_stages(
     return stages
 
 
-@router.post("/stages", response_model=StageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/stages", response_model=StageResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_stage(
     stage_data: StageCreate,
     current_user: User = Depends(get_current_user),
@@ -102,7 +103,9 @@ async def transition_application(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/applications/{application_id}/history", response_model=List[HistoryResponse])
+@router.get(
+    "/applications/{application_id}/history", response_model=list[HistoryResponse]
+)
 async def get_application_history(
     application_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

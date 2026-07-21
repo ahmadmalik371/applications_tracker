@@ -1,15 +1,13 @@
-import uuid
-from typing import Dict, Any, List
 from datetime import datetime, timedelta
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, desc, and_
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job, Application
+from src.models import Application, Candidate, User
 from src.models.application import ApplicationStage
-from src.models.job import JobStatus
-
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
@@ -18,7 +16,7 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 async def hiring_funnel(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Funnel metrics: application counts by stage."""
     org_id = current_user.organization_id
     result = await session.execute(
@@ -43,7 +41,7 @@ async def time_to_hire(
     days: int = Query(90, ge=1, le=365),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Average time from application to hired, in days."""
     org_id = current_user.organization_id
     since = datetime.utcnow() - timedelta(days=days)
@@ -79,13 +77,13 @@ async def time_to_hire(
 async def source_tracking(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Candidate counts by source (parsed from metadata)."""
     org_id = current_user.organization_id
     result = await session.execute(
         select(Candidate.parsed_data).where(Candidate.organization_id == org_id)
     )
-    sources: Dict[str, int] = {}
+    sources: dict[str, int] = {}
     for (parsed,) in result.all():
         if parsed and isinstance(parsed, dict):
             source = parsed.get("source", "unknown")
@@ -100,7 +98,7 @@ async def source_tracking(
 async def ai_accuracy(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compare AI scores with actual outcomes (hired vs rejected)."""
     org_id = current_user.organization_id
     result = await session.execute(

@@ -3,10 +3,8 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Float
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -28,16 +26,16 @@ class AIRecommendationFeedback(BaseModel):
     recruiter_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
-    candidate_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    candidate_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("candidates.id", ondelete="SET NULL"), index=True, nullable=True
     )
-    job_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("jobs.id", ondelete="SET NULL"), index=True, nullable=True
     )
-    ranking_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    ranking_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     rating: Mapped[str] = mapped_column(String(50), nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    context: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    context: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class ModelVersion(BaseModel):
@@ -45,12 +43,16 @@ class ModelVersion(BaseModel):
 
     name: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     version: Mapped[str] = mapped_column(String(50), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    trained_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    deployed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    trained_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deployed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    metrics: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class ModelEvaluation(BaseModel):
@@ -59,29 +61,29 @@ class ModelEvaluation(BaseModel):
     model_version_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("model_versions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    precision: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    recall: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    f1: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    roc_auc: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    map_at_k: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    ndcg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    latency_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    notes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    precision: Mapped[float | None] = mapped_column(Float, nullable=True)
+    recall: Mapped[float | None] = mapped_column(Float, nullable=True)
+    f1: Mapped[float | None] = mapped_column(Float, nullable=True)
+    roc_auc: Mapped[float | None] = mapped_column(Float, nullable=True)
+    map_at_k: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ndcg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    notes: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class BiasReport(BaseModel):
     __tablename__ = "bias_reports"
 
-    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
     )
-    model_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    model_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("model_versions.id", ondelete="SET NULL"), index=True, nullable=True
     )
     metric_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    metric_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    group_a: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    group_b: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    threshold: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    metric_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    group_a: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    group_b: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)

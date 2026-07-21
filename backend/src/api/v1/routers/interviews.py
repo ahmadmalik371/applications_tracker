@@ -1,14 +1,13 @@
 import uuid
-from typing import Optional, List
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
 from src.models import User
 from src.services.interview import InterviewService
-
 
 router = APIRouter(prefix="/api/v1/interviews", tags=["interviews"])
 interview_service = InterviewService()
@@ -19,17 +18,17 @@ class ScheduleRequest(BaseModel):
     interview_type: str = "phone"
     scheduled_at: str
     duration_minutes: int = 60
-    location: Optional[str] = None
-    meeting_link: Optional[str] = None
-    panelist_ids: Optional[List[str]] = None
+    location: str | None = None
+    meeting_link: str | None = None
+    panelist_ids: list[str] | None = None
 
 
 class FeedbackRequest(BaseModel):
     rating: int
-    strengths: Optional[str] = None
-    weaknesses: Optional[str] = None
-    recommendation: Optional[str] = None
-    notes: Optional[str] = None
+    strengths: str | None = None
+    weaknesses: str | None = None
+    recommendation: str | None = None
+    notes: str | None = None
 
 
 class StatusUpdate(BaseModel):
@@ -43,11 +42,11 @@ class InterviewResponse(BaseModel):
     interview_type: str
     scheduled_at: datetime
     duration_minutes: int
-    location: Optional[str]
-    meeting_link: Optional[str]
+    location: str | None
+    meeting_link: str | None
     status: str
-    notes: Optional[str]
-    created_by_id: Optional[str]
+    notes: str | None
+    created_by_id: str | None
 
     class Config:
         from_attributes = True
@@ -58,11 +57,11 @@ class FeedbackResponse(BaseModel):
     interview_id: str
     panelist_id: str
     rating: int
-    strengths: Optional[str]
-    weaknesses: Optional[str]
-    recommendation: Optional[str]
-    notes: Optional[str]
-    created_at: Optional[datetime]
+    strengths: str | None
+    weaknesses: str | None
+    recommendation: str | None
+    notes: str | None
+    created_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -75,7 +74,9 @@ async def schedule_interview(
     session: AsyncSession = Depends(get_db),
 ):
     """Schedule a new interview."""
-    panelist_ids = [uuid.UUID(p) for p in req.panelist_ids] if req.panelist_ids else None
+    panelist_ids = (
+        [uuid.UUID(p) for p in req.panelist_ids] if req.panelist_ids else None
+    )
     interview = await interview_service.schedule_interview(
         session,
         uuid.UUID(req.application_id),
@@ -93,14 +94,16 @@ async def schedule_interview(
     return interview
 
 
-@router.get("/application/{application_id}", response_model=List[InterviewResponse])
+@router.get("/application/{application_id}", response_model=list[InterviewResponse])
 async def list_interviews(
     application_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ):
     """List all interviews for an application."""
-    return await interview_service.get_interviews_for_application(session, application_id)
+    return await interview_service.get_interviews_for_application(
+        session, application_id
+    )
 
 
 @router.patch("/{interview_id}/status", response_model=InterviewResponse)
@@ -112,7 +115,9 @@ async def update_interview_status(
 ):
     """Update an interview's status."""
     try:
-        interview = await interview_service.update_status(session, interview_id, req.status)
+        interview = await interview_service.update_status(
+            session, interview_id, req.status
+        )
         await session.commit()
         await session.refresh(interview)
         return interview
@@ -120,7 +125,11 @@ async def update_interview_status(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/{interview_id}/feedback", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{interview_id}/feedback",
+    response_model=FeedbackResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def submit_feedback(
     interview_id: uuid.UUID,
     req: FeedbackRequest,
@@ -146,7 +155,7 @@ async def submit_feedback(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{interview_id}/feedback", response_model=List[FeedbackResponse])
+@router.get("/{interview_id}/feedback", response_model=list[FeedbackResponse])
 async def get_feedback(
     interview_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

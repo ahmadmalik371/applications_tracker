@@ -9,12 +9,12 @@ Providers implement a common interface:
     - delete(key: str) -> bool
     - exists(key: str) -> bool
 """
+
 from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
 
 from src.core.config import get_settings
 
@@ -26,7 +26,9 @@ class StorageProvider(ABC):
     """Abstract storage provider interface."""
 
     @abstractmethod
-    async def save(self, data: bytes, key: str, content_type: str = "application/octet-stream") -> str:
+    async def save(
+        self, data: bytes, key: str, content_type: str = "application/octet-stream"
+    ) -> str:
         """Save bytes and return a public/internal URL."""
 
     @abstractmethod
@@ -49,7 +51,9 @@ class LocalStorageProvider(StorageProvider):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
-    async def save(self, data: bytes, key: str, content_type: str = "application/octet-stream") -> str:
+    async def save(
+        self, data: bytes, key: str, content_type: str = "application/octet-stream"
+    ) -> str:
         file_path = self.base_dir / key
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(data)
@@ -81,13 +85,14 @@ class S3StorageProvider(StorageProvider):
         region: str = "us-east-1",
         access_key: str = "",
         secret_key: str = "",
-        endpoint_url: Optional[str] = None,
+        endpoint_url: str | None = None,
     ):
         self.bucket = bucket
         self.region = region
         self._client = None
         try:
             import boto3
+
             self._client = boto3.client(
                 "s3",
                 region_name=region,
@@ -98,7 +103,9 @@ class S3StorageProvider(StorageProvider):
         except ImportError:
             logger.warning("boto3 not installed; S3 provider unavailable")
 
-    async def save(self, data: bytes, key: str, content_type: str = "application/octet-stream") -> str:
+    async def save(
+        self, data: bytes, key: str, content_type: str = "application/octet-stream"
+    ) -> str:
         if not self._client:
             raise RuntimeError("S3 client not configured")
         self._client.put_object(

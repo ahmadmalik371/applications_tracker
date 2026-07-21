@@ -10,9 +10,17 @@ settings = get_settings()
 
 # Patterns of sensitive data to mask in log records
 SENSITIVE_KEYS = {
-    "password", "token", "secret", "api_key", "apikey",
-    "authorization", "refresh_token", "access_token",
-    "hashed_password", "stripe_customer_id", "stripe_subscription_id",
+    "password",
+    "token",
+    "secret",
+    "api_key",
+    "apikey",
+    "authorization",
+    "refresh_token",
+    "access_token",
+    "hashed_password",
+    "stripe_customer_id",
+    "stripe_subscription_id",
 }
 SENSITIVE_PATTERNS = [
     (re.compile(r"(Bearer\s+)[A-Za-z0-9\-._~+/]+=*", re.IGNORECASE), r"\1***MASKED***"),

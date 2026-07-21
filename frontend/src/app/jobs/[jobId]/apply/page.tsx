@@ -88,8 +88,8 @@ export default function ApplyPage() {
         throw new Error(err.detail || "Application failed");
       }
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to submit application");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to submit application");
     } finally {
       setSubmitting(false);
     }

@@ -1,15 +1,13 @@
 import uuid
-from typing import Optional, List
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
 
-from src.api.dependencies import get_current_user, get_db, require_role
-from src.models import User, Rule, Candidate, Job
-from src.models.rules import RuleType, RuleOperator
+from src.api.dependencies import get_current_user, get_db
+from src.models import Candidate, Job, Rule, User
 from src.services.rules import RuleEvaluationService
-
 
 router = APIRouter(prefix="/api/v1/rules", tags=["rules"])
 rule_service = RuleEvaluationService()
@@ -18,7 +16,7 @@ rule_service = RuleEvaluationService()
 # Pydantic schemas
 class RuleCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     rule_type: str  # RuleType
     operator: str  # RuleOperator
     condition_value: dict
@@ -28,21 +26,21 @@ class RuleCreate(BaseModel):
 
 
 class RuleUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    operator: Optional[str] = None
-    condition_value: Optional[dict] = None
-    score_impact: Optional[int] = None
-    is_blocking: Optional[bool] = None
-    priority: Optional[int] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    operator: str | None = None
+    condition_value: dict | None = None
+    score_impact: int | None = None
+    is_blocking: bool | None = None
+    priority: int | None = None
+    is_active: bool | None = None
 
 
 class RuleResponse(BaseModel):
     id: str
     organization_id: str
     name: str
-    description: Optional[str]
+    description: str | None
     rule_type: str
     operator: str
     condition_value: dict
@@ -57,11 +55,11 @@ class RuleResponse(BaseModel):
 
 class CandidateRuleEvaluationResponse(BaseModel):
     overall_passed: bool
-    blocking_rules_failed: List[str]
+    blocking_rules_failed: list[str]
     total_score_impact: int
     rules_passed: int
     rules_failed: int
-    details: List[dict]
+    details: list[dict]
 
 
 # Endpoints
@@ -94,7 +92,7 @@ async def create_rule(
     return rule
 
 
-@router.get("", response_model=List[RuleResponse])
+@router.get("", response_model=list[RuleResponse])
 async def list_rules(
     skip: int = 0,
     limit: int = 50,
@@ -120,7 +118,9 @@ async def get_rule(
 ):
     """Get a specific rule."""
     result = await session.execute(
-        select(Rule).where(Rule.id == rule_id).where(Rule.organization_id == current_user.organization_id)
+        select(Rule)
+        .where(Rule.id == rule_id)
+        .where(Rule.organization_id == current_user.organization_id)
     )
     rule = result.scalar_one_or_none()
     if not rule:
@@ -137,7 +137,9 @@ async def update_rule(
 ):
     """Update a rule."""
     result = await session.execute(
-        select(Rule).where(Rule.id == rule_id).where(Rule.organization_id == current_user.organization_id)
+        select(Rule)
+        .where(Rule.id == rule_id)
+        .where(Rule.organization_id == current_user.organization_id)
     )
     rule = result.scalar_one_or_none()
     if not rule:
@@ -161,7 +163,9 @@ async def delete_rule(
 ):
     """Delete a rule."""
     result = await session.execute(
-        select(Rule).where(Rule.id == rule_id).where(Rule.organization_id == current_user.organization_id)
+        select(Rule)
+        .where(Rule.id == rule_id)
+        .where(Rule.organization_id == current_user.organization_id)
     )
     rule = result.scalar_one_or_none()
     if not rule:
@@ -184,14 +188,18 @@ async def evaluate_candidate_against_job(
     """Evaluate all organization rules against a candidate for a specific job."""
     # Fetch candidate and job
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     candidate = candidate_result.scalar_one_or_none()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     job_result = await session.execute(
-        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+        select(Job)
+        .where(Job.id == job_id)
+        .where(Job.organization_id == current_user.organization_id)
     )
     job = job_result.scalar_one_or_none()
     if not job:

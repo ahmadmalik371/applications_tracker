@@ -1,11 +1,12 @@
 import uuid
-from typing import Dict, Any, Optional
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Candidate, Job, Application
-from src.services.features import FeatureExtractor
+from src.models import Candidate, Job
 from src.services.embedding import EmbeddingService
+from src.services.features import FeatureExtractor
 
 
 class RankingService:
@@ -21,10 +22,10 @@ class RankingService:
         job: Job,
         embedding_weight: float = 0.3,
         feature_weight: float = 0.7,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculate comprehensive match score for a candidate-job pair.
-        
+
         Returns:
         {
             "match_score": 0-100,
@@ -41,7 +42,9 @@ class RankingService:
         feature_score = sum(features.values()) / len(features) if features else 0.0
 
         # Calculate embedding similarity
-        embedding_similarity = await self._calculate_embedding_similarity(candidate, job)
+        embedding_similarity = await self._calculate_embedding_similarity(
+            candidate, job
+        )
 
         # Combine scores
         match_score = (
@@ -69,15 +72,17 @@ class RankingService:
         job_id: uuid.UUID,
         organization_id: uuid.UUID,
         limit: int = 100,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Rank all candidates for a specific job.
-        
+
         Returns sorted list of candidates with match scores.
         """
         # Fetch job
         job_result = await session.execute(
-            select(Job).where(Job.id == job_id).where(Job.organization_id == organization_id)
+            select(Job)
+            .where(Job.id == job_id)
+            .where(Job.organization_id == organization_id)
         )
         job = job_result.scalar_one_or_none()
         if not job:
@@ -85,7 +90,9 @@ class RankingService:
 
         # Fetch all active candidates
         candidates_result = await session.execute(
-            select(Candidate).where(Candidate.organization_id == organization_id).limit(limit)
+            select(Candidate)
+            .where(Candidate.organization_id == organization_id)
+            .limit(limit)
         )
         candidates = candidates_result.scalars().all()
 
@@ -93,12 +100,14 @@ class RankingService:
         ranked = []
         for candidate in candidates:
             score_data = await self.calculate_match_score(candidate, job)
-            ranked.append({
-                "candidate_id": str(candidate.id),
-                "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
-                "candidate_email": candidate.email,
-                **score_data,
-            })
+            ranked.append(
+                {
+                    "candidate_id": str(candidate.id),
+                    "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
+                    "candidate_email": candidate.email,
+                    **score_data,
+                }
+            )
 
         # Sort by match score descending
         ranked.sort(key=lambda x: x["match_score"], reverse=True)
@@ -110,15 +119,17 @@ class RankingService:
         candidate_id: uuid.UUID,
         organization_id: uuid.UUID,
         limit: int = 50,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Rank all jobs for a specific candidate.
-        
+
         Returns sorted list of jobs with match scores.
         """
         # Fetch candidate
         candidate_result = await session.execute(
-            select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == organization_id)
+            select(Candidate)
+            .where(Candidate.id == candidate_id)
+            .where(Candidate.organization_id == organization_id)
         )
         candidate = candidate_result.scalar_one_or_none()
         if not candidate:
@@ -126,7 +137,10 @@ class RankingService:
 
         # Fetch all active jobs
         jobs_result = await session.execute(
-            select(Job).where(Job.organization_id == organization_id).where(Job.is_published == True).limit(limit)
+            select(Job)
+            .where(Job.organization_id == organization_id)
+            .where(Job.is_published == True)
+            .limit(limit)
         )
         jobs = jobs_result.scalars().all()
 
@@ -134,12 +148,14 @@ class RankingService:
         ranked = []
         for job in jobs:
             score_data = await self.calculate_match_score(candidate, job)
-            ranked.append({
-                "job_id": str(job.id),
-                "job_title": job.title,
-                "job_location": job.location,
-                **score_data,
-            })
+            ranked.append(
+                {
+                    "job_id": str(job.id),
+                    "job_title": job.title,
+                    "job_location": job.location,
+                    **score_data,
+                }
+            )
 
         # Sort by match score descending
         ranked.sort(key=lambda x: x["match_score"], reverse=True)
@@ -151,19 +167,21 @@ class RankingService:
         candidate_ids: list[uuid.UUID],
         job_id: uuid.UUID,
         organization_id: uuid.UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare multiple candidates side by side for a single job."""
         job_result = await session.execute(
-            select(Job).where(Job.id == job_id).where(Job.organization_id == organization_id)
+            select(Job)
+            .where(Job.id == job_id)
+            .where(Job.organization_id == organization_id)
         )
         job = job_result.scalar_one_or_none()
         if not job:
             return {"job_id": str(job_id), "candidates": []}
 
         candidates_result = await session.execute(
-            select(Candidate).where(Candidate.id.in_(candidate_ids)).where(
-                Candidate.organization_id == organization_id
-            )
+            select(Candidate)
+            .where(Candidate.id.in_(candidate_ids))
+            .where(Candidate.organization_id == organization_id)
         )
         candidates = candidates_result.scalars().all()
 
@@ -171,19 +189,21 @@ class RankingService:
         for candidate in candidates:
             score_data = await self.calculate_match_score(candidate, job)
             parsed = candidate.parsed_data or {}
-            rows.append({
-                "candidate_id": str(candidate.id),
-                "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
-                "candidate_email": candidate.email,
-                "match_score": score_data["match_score"],
-                "confidence": score_data["confidence"],
-                "features": score_data["features"],
-                "embedding_similarity": score_data["embedding_similarity"],
-                "skills": parsed.get("skills", []),
-                "experience_years": self._years_from_parsed(parsed),
-                "education": parsed.get("education", []),
-                "location": parsed.get("location", ""),
-            })
+            rows.append(
+                {
+                    "candidate_id": str(candidate.id),
+                    "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
+                    "candidate_email": candidate.email,
+                    "match_score": score_data["match_score"],
+                    "confidence": score_data["confidence"],
+                    "features": score_data["features"],
+                    "embedding_similarity": score_data["embedding_similarity"],
+                    "skills": parsed.get("skills", []),
+                    "experience_years": self._years_from_parsed(parsed),
+                    "education": parsed.get("education", []),
+                    "location": parsed.get("location", ""),
+                }
+            )
 
         rows.sort(key=lambda x: x["match_score"], reverse=True)
         return {"job_id": str(job_id), "job_title": job.title, "candidates": rows}
@@ -193,11 +213,11 @@ class RankingService:
         session: AsyncSession,
         job_id: uuid.UUID,
         organization_id: uuid.UUID,
-        min_score: Optional[float] = None,
-        max_score: Optional[float] = None,
-        required_skills: Optional[list[str]] = None,
+        min_score: float | None = None,
+        max_score: float | None = None,
+        required_skills: list[str] | None = None,
         limit: int = 100,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Rank candidates then filter by score band and required skills."""
         ranked = await self.rank_candidates_for_job(
             session, job_id, organization_id, limit=limit
@@ -219,17 +239,20 @@ class RankingService:
     @staticmethod
     def _years_from_parsed(parsed: dict) -> int:
         from src.services.parsing import extract_years_of_experience
+
         return extract_years_of_experience(parsed.get("experience", []))
 
     @staticmethod
-    def export_rankings(ranked: list[Dict[str, Any]], fmt: str = "csv") -> str:
+    def export_rankings(ranked: list[dict[str, Any]], fmt: str = "csv") -> str:
         """Serialize a ranked list to CSV or JSON for download."""
         import json
+
         if fmt == "json":
             return json.dumps(ranked, indent=2, default=str)
 
         import csv
         import io
+
         if not ranked:
             return ""
         fields = list(ranked[0].keys())
@@ -257,8 +280,8 @@ class RankingService:
             return 0.5
 
         dot_product = sum(a * b for a, b in zip(vec1, vec2))
-        magnitude1 = sum(a ** 2 for a in vec1) ** 0.5
-        magnitude2 = sum(b ** 2 for b in vec2) ** 0.5
+        magnitude1 = sum(a**2 for a in vec1) ** 0.5
+        magnitude2 = sum(b**2 for b in vec2) ** 0.5
 
         if magnitude1 == 0 or magnitude2 == 0:
             return 0.5
@@ -266,7 +289,7 @@ class RankingService:
         return dot_product / (magnitude1 * magnitude2)
 
     def _calculate_confidence(
-        self, candidate: Candidate, job: Job, features: Dict[str, float]
+        self, candidate: Candidate, job: Job, features: dict[str, float]
     ) -> float:
         """Calculate confidence in the match score (0-1)."""
         confidence_factors = []
@@ -274,7 +297,8 @@ class RankingService:
         # Factor 1: Data completeness for candidate
         if candidate.parsed_data:
             parsed_fields = sum(
-                1 for field in ["skills", "experience", "education"]
+                1
+                for field in ["skills", "experience", "education"]
                 if candidate.parsed_data.get(field)
             )
             confidence_factors.append(parsed_fields / 3.0)
@@ -289,7 +313,13 @@ class RankingService:
 
         # Factor 3: Feature stability (how many features are not zero)
         non_zero_features = sum(1 for v in features.values() if v > 0)
-        confidence_factors.append(non_zero_features / len(features) if features else 0.5)
+        confidence_factors.append(
+            non_zero_features / len(features) if features else 0.5
+        )
 
         # Average confidence factors
-        return sum(confidence_factors) / len(confidence_factors) if confidence_factors else 0.5
+        return (
+            sum(confidence_factors) / len(confidence_factors)
+            if confidence_factors
+            else 0.5
+        )

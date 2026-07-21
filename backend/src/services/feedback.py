@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.ai import AIRecommendationFeedback, FeedbackRating
+from src.models.ai import AIRecommendationFeedback
 
 
 class FeedbackService:
@@ -19,11 +19,11 @@ class FeedbackService:
         organization_id: uuid.UUID,
         recruiter_id: uuid.UUID,
         rating: str,
-        candidate_id: Optional[uuid.UUID] = None,
-        job_id: Optional[uuid.UUID] = None,
-        ranking_score: Optional[float] = None,
-        note: Optional[str] = None,
-        context: Optional[dict] = None,
+        candidate_id: uuid.UUID | None = None,
+        job_id: uuid.UUID | None = None,
+        ranking_score: float | None = None,
+        note: str | None = None,
+        context: dict | None = None,
     ) -> AIRecommendationFeedback:
         fb = AIRecommendationFeedback(
             organization_id=organization_id,
@@ -56,11 +56,16 @@ class FeedbackService:
         )
         total = (await session.execute(count_stmt)).scalar_one()
         rows = (
-            await session.execute(
-                stmt.order_by(AIRecommendationFeedback.created_at.desc())
-                .offset(skip).limit(limit)
+            (
+                await session.execute(
+                    stmt.order_by(AIRecommendationFeedback.created_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return rows, total
 
     async def feedback_summary(

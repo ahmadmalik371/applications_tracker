@@ -1,10 +1,10 @@
 import uuid
-from typing import Dict, Any, List, Optional
-from sqlalchemy import select, desc
+from typing import Any
+
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Application, WorkflowStage, ApplicationWorkflowHistory
-from src.models.application import ApplicationStage
+from src.models import Application, ApplicationWorkflowHistory, WorkflowStage
 
 
 class WorkflowService:
@@ -12,7 +12,7 @@ class WorkflowService:
 
     async def get_stages(
         self, session: AsyncSession, organization_id: uuid.UUID
-    ) -> List[WorkflowStage]:
+    ) -> list[WorkflowStage]:
         result = await session.execute(
             select(WorkflowStage)
             .where(WorkflowStage.organization_id == organization_id)
@@ -29,7 +29,7 @@ class WorkflowService:
         order: int = 0,
         is_rejection_stage: bool = False,
         is_hired_stage: bool = False,
-        color: Optional[str] = None,
+        color: str | None = None,
     ) -> WorkflowStage:
         stage = WorkflowStage(
             organization_id=organization_id,
@@ -48,9 +48,9 @@ class WorkflowService:
         session: AsyncSession,
         application_id: uuid.UUID,
         to_stage: str,
-        changed_by_id: Optional[uuid.UUID] = None,
-        note: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        changed_by_id: uuid.UUID | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
         """Move an application to a new stage and record the transition."""
         app_result = await session.execute(
             select(Application).where(Application.id == application_id)
@@ -81,7 +81,7 @@ class WorkflowService:
 
     async def get_application_history(
         self, session: AsyncSession, application_id: uuid.UUID
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         result = await session.execute(
             select(ApplicationWorkflowHistory)
             .where(ApplicationWorkflowHistory.application_id == application_id)

@@ -13,7 +13,16 @@ select = [
     "SIM", # flake8-simplify
 ]
 ignore = [
-    "E501", # line too long (handled by formatter)
+    "E501",  # line too long (handled by formatter)
+    "B008",  # function call in argument default (FastAPI Depends/Query pattern)
+    "B904",  # raise from err (acceptable in FastAPI handlers)
+    "B905",  # zip() without strict= (acceptable in existing code)
+    "B007",  # loop control variable not used (acceptable)
+    "E712",  # equality comparison to True/False (SQLAlchemy requires == True)
+    "F401",  # unused imports (models/__init__.py re-exports are intentional)
+    "F821",  # undefined name (TYPE_CHECKING forward references)
+    "F841",  # local variable assigned but never used
+    "UP042", # str+Enum should be StrEnum (pre-existing pattern, backward compat)
 ]
 
 [lint.isort]

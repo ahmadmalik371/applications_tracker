@@ -1,10 +1,7 @@
 """
 Seed script using the application's own services to create demo data.
-Run with:  docker exec -i ats-backend-1 python seed_data.py
+Run with:  python seed_data.py  (uses DATABASE_URL from .env or environment)
 """
-import os
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://ats_user:13851098@db:5432/ats_db"
-
 import sys
 import uuid
 import asyncio

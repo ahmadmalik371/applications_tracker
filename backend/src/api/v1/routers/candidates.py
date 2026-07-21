@@ -1,22 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.api.dependencies import get_current_user, require_role, get_db
+
+from src.api.dependencies import get_current_user, get_db, require_role
 from src.api.v1.schemas.candidates import (
-    JobCreate, JobResponse, JobUpdate,
-    CandidateCreate, CandidateResponse, CandidateUpdate,
-    ApplicationCreate, ApplicationResponse, ApplicationUpdate
+    ApplicationCreate,
+    ApplicationResponse,
+    ApplicationUpdate,
+    CandidateCreate,
+    CandidateResponse,
+    CandidateUpdate,
+    JobCreate,
+    JobResponse,
+    JobUpdate,
 )
 from src.api.v1.schemas.uploads import ResumeUploadResponse
 from src.models import User
 from src.services.candidates import (
-    create_job, get_job, list_jobs, update_job, delete_job,
-    create_candidate, get_candidate, list_candidates, update_candidate, delete_candidate,
-    create_application, get_application, list_applications, update_application,
+    create_application,
+    create_candidate,
+    create_job,
+    delete_candidate,
+    delete_job,
+    get_application,
+    get_candidate,
+    get_job,
+    list_applications,
+    list_candidates,
+    list_jobs,
+    update_application,
+    update_candidate,
+    update_job,
+)
+from src.services.search import (
+    find_matching_jobs,
+    find_similar_candidates,
+    hybrid_search_candidates,
 )
 from src.services.upload import save_resume_file
-from src.services.search import find_similar_candidates, find_matching_jobs, hybrid_search_candidates
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
@@ -25,7 +47,9 @@ router = APIRouter(prefix="/candidates", tags=["Candidates"])
 @router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
 async def create_job_endpoint(
     request: JobCreate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
+    current_user: User = Depends(
+        require_role("Company Admin", "Recruiter", "Hiring Manager")
+    ),
     db=Depends(get_db),
 ):
     job = await create_job(
@@ -37,12 +61,13 @@ async def create_job_endpoint(
         location=request.location,
         employment_type=request.employment_type,
     )
-    
+
     # Trigger embedding generation for job
     if job.description:
         from src.tasks import generate_job_embedding_task
+
         generate_job_embedding_task.delay(str(job.id), job.description)
-    
+
     return job
 
 
@@ -54,7 +79,9 @@ async def get_job_endpoint(
 ):
     job = await get_job(db, job_id)
     if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
     return job
 
 
@@ -65,7 +92,9 @@ async def list_jobs_endpoint(
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    jobs = await list_jobs(db, organization_id=current_user.organization_id, limit=limit, offset=skip)
+    jobs = await list_jobs(
+        db, organization_id=current_user.organization_id, limit=limit, offset=skip
+    )
     return jobs
 
 
@@ -78,8 +107,10 @@ async def update_job_endpoint(
 ):
     job = await get_job(db, job_id)
     if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
     updated_job = await update_job(db, job_id, **request.dict(exclude_unset=True))
     return updated_job
 
@@ -92,8 +123,10 @@ async def delete_job_endpoint(
 ):
     job = await get_job(db, job_id)
     if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
     await delete_job(db, job_id)
 
 
@@ -123,7 +156,9 @@ async def get_candidate_endpoint(
 ):
     candidate = await get_candidate(db, candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
     return candidate
 
 
@@ -134,7 +169,9 @@ async def list_candidates_endpoint(
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    candidates = await list_candidates(db, organization_id=current_user.organization_id, limit=limit, offset=skip)
+    candidates = await list_candidates(
+        db, organization_id=current_user.organization_id, limit=limit, offset=skip
+    )
     return candidates
 
 
@@ -147,9 +184,13 @@ async def update_candidate_endpoint(
 ):
     candidate = await get_candidate(db, candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
-    updated_candidate = await update_candidate(db, candidate_id, **request.dict(exclude_unset=True))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
+
+    updated_candidate = await update_candidate(
+        db, candidate_id, **request.dict(exclude_unset=True)
+    )
     return updated_candidate
 
 
@@ -161,26 +202,38 @@ async def delete_candidate_endpoint(
 ):
     candidate = await get_candidate(db, candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
+
     await delete_candidate(db, candidate_id)
 
 
 # Application endpoints
-@router.post("/applications", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/applications",
+    response_model=ApplicationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_application_endpoint(
     request: ApplicationCreate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
+    current_user: User = Depends(
+        require_role("Company Admin", "Recruiter", "Hiring Manager")
+    ),
     db=Depends(get_db),
 ):
     job = await get_job(db, request.job_id)
     if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
     candidate = await get_candidate(db, request.candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
+
     application = await create_application(
         db,
         organization_id=current_user.organization_id,
@@ -198,7 +251,9 @@ async def get_application_endpoint(
 ):
     application = await get_application(db, application_id)
     if not application or application.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
     return application
 
 
@@ -209,7 +264,9 @@ async def list_applications_endpoint(
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    applications = await list_applications(db, organization_id=current_user.organization_id, limit=limit, offset=skip)
+    applications = await list_applications(
+        db, organization_id=current_user.organization_id, limit=limit, offset=skip
+    )
     return applications
 
 
@@ -217,14 +274,20 @@ async def list_applications_endpoint(
 async def update_application_endpoint(
     application_id: UUID,
     request: ApplicationUpdate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
+    current_user: User = Depends(
+        require_role("Company Admin", "Recruiter", "Hiring Manager")
+    ),
     db=Depends(get_db),
 ):
     application = await get_application(db, application_id)
     if not application or application.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
-    
-    updated_application = await update_application(db, application_id, **request.dict(exclude_unset=True))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
+
+    updated_application = await update_application(
+        db, application_id, **request.dict(exclude_unset=True)
+    )
     return updated_application
 
 
@@ -239,18 +302,21 @@ async def upload_resume(
     """Upload and validate resume for a candidate."""
     candidate = await get_candidate(db, candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
+
     # Save resume file
     resume_url, file_size = await save_resume_file(file, str(candidate_id))
-    
+
     # Update candidate with resume URL
     updated_candidate = await update_candidate(db, candidate_id, resume_url=resume_url)
-    
+
     # Trigger async parsing task
     from src.tasks import parse_resume_task
+
     parse_resume_task.delay(str(candidate_id), resume_url)
-    
+
     return ResumeUploadResponse(
         candidate_id=candidate_id,
         resume_url=resume_url,
@@ -265,14 +331,18 @@ async def upload_resume(
 async def get_similar_candidates(
     job_id: UUID,
     limit: int = Query(10, ge=1, le=50),
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
+    current_user: User = Depends(
+        require_role("Company Admin", "Recruiter", "Hiring Manager")
+    ),
     db=Depends(get_db),
 ):
     """Get candidates most similar to a job using semantic matching."""
     job = await get_job(db, job_id)
     if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
     similar_candidates = await find_similar_candidates(
         db, job_id, current_user.organization_id, limit=limit
     )
@@ -289,8 +359,10 @@ async def get_matching_jobs(
     """Get jobs most suitable for a candidate using semantic matching."""
     candidate = await get_candidate(db, candidate_id)
     if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
+
     matching_jobs = await find_matching_jobs(
         db, candidate_id, current_user.organization_id, limit=limit
     )

@@ -3,10 +3,11 @@
 Initializes Sentry SDK when SENTRY_DSN is configured. Sensitive data is
 sanitized before sending to Sentry via before_send hooks.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from src.core.config import get_settings
 
@@ -15,18 +16,27 @@ settings = get_settings()
 
 try:
     import sentry_sdk
-    from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
     _HAS_SENTRY = True
 except ImportError:
     _HAS_SENTRY = False
 
 
 SENSITIVE_KEYS = {
-    "password", "token", "secret", "api_key", "apikey",
-    "authorization", "refresh_token", "access_token",
-    "hashed_password", "stripe_customer_id", "stripe_subscription_id",
+    "password",
+    "token",
+    "secret",
+    "api_key",
+    "apikey",
+    "authorization",
+    "refresh_token",
+    "access_token",
+    "hashed_password",
+    "stripe_customer_id",
+    "stripe_subscription_id",
 }
 
 
@@ -42,7 +52,7 @@ def _scrub_sensitive(data: Any) -> Any:
     return data
 
 
-def _before_send(event: dict, hint: dict) -> Optional[dict]:
+def _before_send(event: dict, hint: dict) -> dict | None:
     """Sentry before_send hook to scrub sensitive data."""
     try:
         if "request" in event:

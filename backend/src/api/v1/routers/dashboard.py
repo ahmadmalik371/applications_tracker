@@ -1,14 +1,12 @@
-import uuid
-from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func, desc
+from typing import Any
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job, Application
-from src.models.application import ApplicationStage
+from src.models import Application, Candidate, Job, User
 from src.models.job import JobStatus
-
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -17,7 +15,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 async def get_dashboard_stats(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Aggregate metrics for the recruiter dashboard widgets."""
     org_id = current_user.organization_id
 

@@ -1,5 +1,6 @@
 import logging
 import sys
+
 from celery import Celery
 from celery.signals import after_setup_logger, after_setup_task_logger, worker_shutdown
 from kombu import Queue
@@ -67,12 +68,12 @@ celery_app.autodiscover_tasks(["src.core", "src.services"])
 # Celery Logging Configuration
 def setup_celery_logging(*args, **kwargs):
     logger = logging.getLogger()
-    
+
     # Check if handlers already configured
     if logger.handlers:
         for handler in list(logger.handlers):
             logger.removeHandler(handler)
-            
+
     logHandler = logging.StreamHandler(sys.stdout)
     formatter = JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -114,12 +115,16 @@ def cleanup_expired_sessions(self):
 
 
 @celery_app.task(bind=True, queue="default")
-def send_to_dlq(self, task_name: str, task_id: str, args: list, kwargs: dict, error: str):
+def send_to_dlq(
+    self, task_name: str, task_id: str, args: list, kwargs: dict, error: str
+):
     """Send a permanently failed task to the Dead Letter Queue for inspection."""
     logger = logging.getLogger("dlq")
     logger.error(
         "Task sent to DLQ: task_name=%s task_id=%s error=%s",
-        task_name, task_id, error,
+        task_name,
+        task_id,
+        error,
     )
     return {"status": "dlq", "task_name": task_name, "task_id": task_id}
 

@@ -45,8 +45,11 @@ export default function SignupPage() {
     try {
       await signup(data.organization_name, data.email, data.password, data.full_name);
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        "Registration failed. Please try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

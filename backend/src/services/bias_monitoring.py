@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.ai import BiasReport
@@ -30,8 +30,8 @@ class BiasMonitoringService:
         group_b: str,
         rate_a: float,
         rate_b: float,
-        organization_id: Optional[uuid.UUID] = None,
-        model_version_id: Optional[uuid.UUID] = None,
+        organization_id: uuid.UUID | None = None,
+        model_version_id: uuid.UUID | None = None,
         threshold: float = DEFAULT_THRESHOLD,
     ) -> BiasReport:
         diff = abs(rate_a - rate_b)
@@ -60,11 +60,15 @@ class BiasMonitoringService:
         group_b: str,
         rate_a: float,
         rate_b: float,
-        organization_id: Optional[uuid.UUID] = None,
-        model_version_id: Optional[uuid.UUID] = None,
+        organization_id: uuid.UUID | None = None,
+        model_version_id: uuid.UUID | None = None,
         threshold: float = 0.8,
     ) -> BiasReport:
-        ratio = min(rate_a, rate_b) / max(rate_a, rate_b) if max(rate_a, rate_b) > 0 else 1.0
+        ratio = (
+            min(rate_a, rate_b) / max(rate_a, rate_b)
+            if max(rate_a, rate_b) > 0
+            else 1.0
+        )
         is_flagged = ratio < threshold
         report = BiasReport(
             organization_id=organization_id,
@@ -86,7 +90,7 @@ class BiasMonitoringService:
         self,
         session: AsyncSession,
         *,
-        organization_id: Optional[uuid.UUID] = None,
+        organization_id: uuid.UUID | None = None,
         flagged_only: bool = False,
         skip: int = 0,
         limit: int = 50,
@@ -101,10 +105,16 @@ class BiasMonitoringService:
             count_stmt = count_stmt.where(BiasReport.is_flagged == True)
         total = (await session.execute(count_stmt)).scalar_one()
         rows = (
-            await session.execute(
-                stmt.order_by(BiasReport.created_at.desc()).offset(skip).limit(limit)
+            (
+                await session.execute(
+                    stmt.order_by(BiasReport.created_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return rows, total
 
 

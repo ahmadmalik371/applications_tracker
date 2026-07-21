@@ -1,9 +1,9 @@
 import uuid
-from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Candidate, Job, Application, User, Organization
+from src.models import Application, Candidate, Job
 
 
 async def create_job(
@@ -11,9 +11,9 @@ async def create_job(
     organization_id: uuid.UUID,
     created_by_id: uuid.UUID,
     title: str,
-    description: Optional[str] = None,
-    location: Optional[str] = None,
-    employment_type: Optional[str] = None,
+    description: str | None = None,
+    location: str | None = None,
+    employment_type: str | None = None,
 ) -> Job:
     job = Job(
         title=title,
@@ -29,27 +29,32 @@ async def create_job(
     return job
 
 
-async def get_job(session: AsyncSession, job_id: uuid.UUID) -> Optional[Job]:
+async def get_job(session: AsyncSession, job_id: uuid.UUID) -> Job | None:
     result = await session.execute(select(Job).where(Job.id == job_id))
     return result.scalar_one_or_none()
 
 
-async def list_jobs(session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[Job]:
+async def list_jobs(
+    session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[Job]:
     result = await session.execute(
-        select(Job).where(Job.organization_id == organization_id).limit(limit).offset(offset)
+        select(Job)
+        .where(Job.organization_id == organization_id)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 
 
-async def update_job(session: AsyncSession, job_id: uuid.UUID, **kwargs) -> Optional[Job]:
+async def update_job(session: AsyncSession, job_id: uuid.UUID, **kwargs) -> Job | None:
     job = await get_job(session, job_id)
     if not job:
         return None
-    
+
     for key, value in kwargs.items():
         if value is not None and hasattr(job, key):
             setattr(job, key, value)
-    
+
     await session.commit()
     await session.refresh(job)
     return job
@@ -68,9 +73,9 @@ async def create_candidate(
     session: AsyncSession,
     organization_id: uuid.UUID,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    phone: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    phone: str | None = None,
 ) -> Candidate:
     candidate = Candidate(
         email=email,
@@ -85,27 +90,38 @@ async def create_candidate(
     return candidate
 
 
-async def get_candidate(session: AsyncSession, candidate_id: uuid.UUID) -> Optional[Candidate]:
-    result = await session.execute(select(Candidate).where(Candidate.id == candidate_id))
+async def get_candidate(
+    session: AsyncSession, candidate_id: uuid.UUID
+) -> Candidate | None:
+    result = await session.execute(
+        select(Candidate).where(Candidate.id == candidate_id)
+    )
     return result.scalar_one_or_none()
 
 
-async def list_candidates(session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[Candidate]:
+async def list_candidates(
+    session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[Candidate]:
     result = await session.execute(
-        select(Candidate).where(Candidate.organization_id == organization_id).limit(limit).offset(offset)
+        select(Candidate)
+        .where(Candidate.organization_id == organization_id)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 
 
-async def update_candidate(session: AsyncSession, candidate_id: uuid.UUID, **kwargs) -> Optional[Candidate]:
+async def update_candidate(
+    session: AsyncSession, candidate_id: uuid.UUID, **kwargs
+) -> Candidate | None:
     candidate = await get_candidate(session, candidate_id)
     if not candidate:
         return None
-    
+
     for key, value in kwargs.items():
         if value is not None and hasattr(candidate, key):
             setattr(candidate, key, value)
-    
+
     await session.commit()
     await session.refresh(candidate)
     return candidate
@@ -137,27 +153,38 @@ async def create_application(
     return application
 
 
-async def get_application(session: AsyncSession, application_id: uuid.UUID) -> Optional[Application]:
-    result = await session.execute(select(Application).where(Application.id == application_id))
+async def get_application(
+    session: AsyncSession, application_id: uuid.UUID
+) -> Application | None:
+    result = await session.execute(
+        select(Application).where(Application.id == application_id)
+    )
     return result.scalar_one_or_none()
 
 
-async def list_applications(session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[Application]:
+async def list_applications(
+    session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[Application]:
     result = await session.execute(
-        select(Application).where(Application.organization_id == organization_id).limit(limit).offset(offset)
+        select(Application)
+        .where(Application.organization_id == organization_id)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 
 
-async def update_application(session: AsyncSession, application_id: uuid.UUID, **kwargs) -> Optional[Application]:
+async def update_application(
+    session: AsyncSession, application_id: uuid.UUID, **kwargs
+) -> Application | None:
     application = await get_application(session, application_id)
     if not application:
         return None
-    
+
     for key, value in kwargs.items():
         if value is not None and hasattr(application, key):
             setattr(application, key, value)
-    
+
     await session.commit()
     await session.refresh(application)
     return application

@@ -1,16 +1,15 @@
 import uuid
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import PlainTextResponse, Response
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job, RankingHistory
-from src.services.ranking import RankingService
+from src.models import Candidate, Job, RankingHistory, User
 from src.services.explainability import ExplainabilityService
-
+from src.services.ranking import RankingService
 
 router = APIRouter(prefix="/api/v1/rankings", tags=["rankings"])
 ranking_service = RankingService()
@@ -32,7 +31,7 @@ class CandidateRankingResponse(BaseModel):
 class JobRankingResponse(BaseModel):
     job_id: str
     job_title: str
-    job_location: Optional[str]
+    job_location: str | None
     match_score: float
     confidence: float
     features: dict
@@ -44,11 +43,11 @@ class ExplanationResponse(BaseModel):
     summary: str
     match_score: float
     confidence: float
-    strengths: List[str]
-    weaknesses: List[str]
+    strengths: list[str]
+    weaknesses: list[str]
     skill_analysis: dict
-    recommendations: List[str]
-    next_steps: List[str]
+    recommendations: list[str]
+    next_steps: list[str]
 
 
 class ReRankRequest(BaseModel):
@@ -57,7 +56,7 @@ class ReRankRequest(BaseModel):
 
 
 class CompareRequest(BaseModel):
-    candidate_ids: List[str]
+    candidate_ids: list[str]
     job_id: str
 
 
@@ -67,7 +66,7 @@ class RankingHistoryResponse(BaseModel):
     embedding_weight: float
     feature_weight: float
     candidate_count: int
-    top_score: Optional[float]
+    top_score: float | None
     created_at: str
     results: list
 
@@ -76,14 +75,16 @@ class RankingHistoryResponse(BaseModel):
 
 
 class PaginatedRankingResponse(BaseModel):
-    items: List[CandidateRankingResponse]
+    items: list[CandidateRankingResponse]
     total: int
     skip: int
     limit: int
 
 
 # Endpoints
-@router.get("/candidates/for-job/{job_id}", response_model=List[CandidateRankingResponse])
+@router.get(
+    "/candidates/for-job/{job_id}", response_model=list[CandidateRankingResponse]
+)
 async def rank_candidates_for_job(
     job_id: uuid.UUID,
     limit: int = 100,
@@ -92,12 +93,14 @@ async def rank_candidates_for_job(
 ):
     """
     Rank all candidates for a specific job.
-    
+
     Returns candidates sorted by match score (highest first).
     """
     # Verify job exists and belongs to user's organization
     job_result = await session.execute(
-        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+        select(Job)
+        .where(Job.id == job_id)
+        .where(Job.organization_id == current_user.organization_id)
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -111,7 +114,9 @@ async def rank_candidates_for_job(
     return ranked
 
 
-@router.get("/jobs/for-candidate/{candidate_id}", response_model=List[JobRankingResponse])
+@router.get(
+    "/jobs/for-candidate/{candidate_id}", response_model=list[JobRankingResponse]
+)
 async def rank_jobs_for_candidate(
     candidate_id: uuid.UUID,
     limit: int = 50,
@@ -120,12 +125,14 @@ async def rank_jobs_for_candidate(
 ):
     """
     Rank all published jobs for a specific candidate.
-    
+
     Returns jobs sorted by match score (highest first).
     """
     # Verify candidate exists and belongs to user's organization
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     candidate = candidate_result.scalar_one_or_none()
     if not candidate:
@@ -148,19 +155,23 @@ async def get_match_score(
 ):
     """
     Get detailed match score for a candidate-job pair.
-    
+
     Returns score, confidence, features breakdown, and explanations.
     """
     # Verify candidate and job exist and belong to user's organization
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     candidate = candidate_result.scalar_one_or_none()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     job_result = await session.execute(
-        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+        select(Job)
+        .where(Job.id == job_id)
+        .where(Job.organization_id == current_user.organization_id)
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -187,19 +198,23 @@ async def get_explanation(
 ):
     """
     Get AI-generated explanation for candidate-job match.
-    
+
     Returns summary, strengths, weaknesses, skill analysis, and recommendations.
     """
     # Verify candidate and job exist and belong to user's organization
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     candidate = candidate_result.scalar_one_or_none()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     job_result = await session.execute(
-        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+        select(Job)
+        .where(Job.id == job_id)
+        .where(Job.organization_id == current_user.organization_id)
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -215,7 +230,9 @@ async def get_explanation(
 
 
 # Re-rank with custom weights
-@router.post("/candidates/re-rank/{job_id}", response_model=List[CandidateRankingResponse])
+@router.post(
+    "/candidates/re-rank/{job_id}", response_model=list[CandidateRankingResponse]
+)
 async def re_rank_candidates_for_job(
     job_id: uuid.UUID,
     request: ReRankRequest,
@@ -225,14 +242,18 @@ async def re_rank_candidates_for_job(
 ):
     """Re-rank candidates for a job using custom embedding/feature weights."""
     job_result = await session.execute(
-        select(Job).where(Job.id == job_id).where(Job.organization_id == current_user.organization_id)
+        select(Job)
+        .where(Job.id == job_id)
+        .where(Job.organization_id == current_user.organization_id)
     )
     job = job_result.scalar_one_or_none()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     candidates_result = await session.execute(
-        select(Candidate).where(Candidate.organization_id == current_user.organization_id).limit(limit)
+        select(Candidate)
+        .where(Candidate.organization_id == current_user.organization_id)
+        .limit(limit)
     )
     candidates = candidates_result.scalars().all()
 
@@ -241,12 +262,14 @@ async def re_rank_candidates_for_job(
         score_data = await ranking_service.calculate_match_score(
             candidate, job, request.embedding_weight, request.feature_weight
         )
-        ranked.append({
-            "candidate_id": str(candidate.id),
-            "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
-            "candidate_email": candidate.email,
-            **score_data,
-        })
+        ranked.append(
+            {
+                "candidate_id": str(candidate.id),
+                "candidate_name": f"{candidate.first_name or ''} {candidate.last_name or ''}".strip(),
+                "candidate_email": candidate.email,
+                **score_data,
+            }
+        )
 
     ranked.sort(key=lambda x: x["match_score"], reverse=True)
 
@@ -268,7 +291,7 @@ async def re_rank_candidates_for_job(
 
 
 # Ranking history
-@router.get("/history/{job_id}", response_model=List[RankingHistoryResponse])
+@router.get("/history/{job_id}", response_model=list[RankingHistoryResponse])
 async def get_ranking_history(
     job_id: uuid.UUID,
     skip: int = Query(0, ge=0),
@@ -315,7 +338,9 @@ async def compare_candidates(
         raise HTTPException(status_code=400, detail="Invalid candidate id format")
 
     if len(candidate_ids) < 2:
-        raise HTTPException(status_code=400, detail="At least 2 candidates are required for comparison")
+        raise HTTPException(
+            status_code=400, detail="At least 2 candidates are required for comparison"
+        )
 
     result = await ranking_service.compare_candidates(
         session,
@@ -327,12 +352,12 @@ async def compare_candidates(
 
 
 # Filtering
-@router.get("/filter/{job_id}", response_model=List[CandidateRankingResponse])
+@router.get("/filter/{job_id}", response_model=list[CandidateRankingResponse])
 async def filter_ranked_candidates(
     job_id: uuid.UUID,
-    min_score: Optional[float] = Query(None, ge=0, le=100),
-    max_score: Optional[float] = Query(None, ge=0, le=100),
-    required_skills: Optional[List[str]] = Query(None),
+    min_score: float | None = Query(None, ge=0, le=100),
+    max_score: float | None = Query(None, ge=0, le=100),
+    required_skills: list[str] | None = Query(None),
     limit: int = Query(100, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -367,9 +392,11 @@ async def export_rankings(
 
     if fmt == "json":
         return PlainTextResponse(payload, media_type="application/json")
-    return PlainTextResponse(payload, media_type="text/csv", headers={
-        "Content-Disposition": f"attachment; filename=rankings_{job_id}.csv"
-    })
+    return PlainTextResponse(
+        payload,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=rankings_{job_id}.csv"},
+    )
 
 
 # Paginated ranking

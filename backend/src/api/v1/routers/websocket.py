@@ -1,9 +1,9 @@
 """WebSocket endpoint for real-time notifications and status updates."""
 
-import json
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from collections import defaultdict
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 

@@ -1,13 +1,14 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
+
 
 class JobBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=5000)
-    location: Optional[str] = Field(None, max_length=255)
-    employment_type: Optional[str] = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=5000)
+    location: str | None = Field(None, max_length=255)
+    employment_type: str | None = Field(None, max_length=100)
 
 
 class JobCreate(JobBase):
@@ -15,12 +16,12 @@ class JobCreate(JobBase):
 
 
 class JobUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    location: Optional[str] = None
-    employment_type: Optional[str] = None
-    is_published: Optional[bool] = None
-    status: Optional[str] = None
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    location: str | None = None
+    employment_type: str | None = None
+    is_published: bool | None = None
+    status: str | None = None
 
 
 class JobResponse(JobBase):
@@ -28,7 +29,7 @@ class JobResponse(JobBase):
     status: str
     is_published: bool
     organization_id: UUID
-    created_by_id: Optional[UUID]
+    created_by_id: UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -37,10 +38,10 @@ class JobResponse(JobBase):
 
 
 class CandidateBase(BaseModel):
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
+    first_name: str | None = Field(None, max_length=100)
+    last_name: str | None = Field(None, max_length=100)
     email: str = Field(..., max_length=255)
-    phone: Optional[str] = Field(None, max_length=50)
+    phone: str | None = Field(None, max_length=50)
 
 
 class CandidateCreate(CandidateBase):
@@ -48,17 +49,17 @@ class CandidateCreate(CandidateBase):
 
 
 class CandidateUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    status: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    status: str | None = None
 
 
 class CandidateResponse(CandidateBase):
     id: UUID
     status: str
-    resume_url: Optional[str]
+    resume_url: str | None
     organization_id: UUID
     created_at: datetime
     updated_at: datetime
@@ -77,14 +78,14 @@ class ApplicationCreate(ApplicationBase):
 
 
 class ApplicationUpdate(BaseModel):
-    status: Optional[str] = None
-    score: Optional[float] = None
+    status: str | None = None
+    score: float | None = None
 
 
 class ApplicationResponse(ApplicationBase):
     id: UUID
     status: str
-    score: Optional[float]
+    score: float | None
     is_active: bool
     organization_id: UUID
     created_at: datetime

@@ -1,5 +1,3 @@
-import math
-from typing import Dict, List, Any, Optional
 from src.models import Candidate, Job
 from src.services.parsing import extract_years_of_experience
 
@@ -7,10 +5,12 @@ from src.services.parsing import extract_years_of_experience
 class FeatureExtractor:
     """Service for extracting ML features from candidates and jobs."""
 
-    def extract_candidate_features(self, candidate: Candidate, job: Job) -> Dict[str, float]:
+    def extract_candidate_features(
+        self, candidate: Candidate, job: Job
+    ) -> dict[str, float]:
         """
         Extract normalized features for a candidate relative to a job.
-        
+
         Returns a dict of feature_name -> normalized_value (0-1)
         """
         features = {}
@@ -69,9 +69,7 @@ class FeatureExtractor:
         if not candidate.parsed_data:
             return 0.0
 
-        candidate_skills = [
-            s.lower() for s in candidate.parsed_data.get("skills", [])
-        ]
+        candidate_skills = [s.lower() for s in candidate.parsed_data.get("skills", [])]
         if not candidate_skills:
             return 0.0
 
@@ -140,9 +138,9 @@ class FeatureExtractor:
             return 1.0
 
         # Partial match (same city/region)
-        if any(
-            part in job_location for part in candidate_location.split()
-        ) or any(part in candidate_location for part in job_location.split()):
+        if any(part in job_location for part in candidate_location.split()) or any(
+            part in candidate_location for part in job_location.split()
+        ):
             return 0.7
 
         return 0.2  # Different location
@@ -205,9 +203,7 @@ class FeatureExtractor:
 
         return 0.0
 
-    def _extract_required_experience_from_description(
-        self, description: str
-    ) -> int:
+    def _extract_required_experience_from_description(self, description: str) -> int:
         """Extract required years of experience from job description."""
         # Simple pattern matching for "X years" or "X+ years"
         import re
@@ -220,7 +216,7 @@ class FeatureExtractor:
 
         return 0
 
-    def _extract_skills_from_description(self, description: str) -> List[str]:
+    def _extract_skills_from_description(self, description: str) -> list[str]:
         """Extract skill keywords from job description."""
         # Common tech skills to look for
         common_skills = [

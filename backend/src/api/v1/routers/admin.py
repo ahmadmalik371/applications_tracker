@@ -1,16 +1,21 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.dependencies import get_current_user, require_role, get_db
+from src.api.dependencies import get_db, require_role
 from src.models import (
-    User, Organization, Job, Candidate, SaaSPlan, Subscription,
-    FeatureFlag, PlatformSetting, SystemAnnouncement, GlobalRole,
+    Candidate,
+    GlobalRole,
+    Job,
+    Organization,
+    PlatformSetting,
+    Subscription,
+    SystemAnnouncement,
+    User,
 )
 from src.services.feature_flags import feature_flag_service
 from src.services.subscription import subscription_service
@@ -57,7 +62,7 @@ class OrgFeatureFlagOverrideIn(BaseModel):
 class PlatformSettingIn(BaseModel):
     key: str
     value: dict
-    description: Optional[str] = None
+    description: str | None = None
     is_public: bool = False
 
 
@@ -66,8 +71,8 @@ class SystemAnnouncementIn(BaseModel):
     body: str
     severity: str = "info"
     is_active: bool = True
-    starts_at: Optional[datetime] = None
-    ends_at: Optional[datetime] = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
 
 
 class DashboardStatsOut(BaseModel):
@@ -88,16 +93,21 @@ async def admin_stats(
     users = (await db.execute(select(func.count(User.id)))).scalar_one()
     jobs = (await db.execute(select(func.count(Job.id)))).scalar_one()
     candidates = (await db.execute(select(func.count(Candidate.id)))).scalar_one()
-    subs = (await db.execute(
-        select(func.count(Subscription.id)).where(Subscription.status == "Active")
-    )).scalar_one()
+    subs = (
+        await db.execute(
+            select(func.count(Subscription.id)).where(Subscription.status == "Active")
+        )
+    ).scalar_one()
     return DashboardStatsOut(
-        organizations=orgs, users=users, jobs=jobs, candidates=candidates,
+        organizations=orgs,
+        users=users,
+        jobs=jobs,
+        candidates=candidates,
         active_subscriptions=subs,
     )
 
 
-@router.get("/plans", response_model=List[SaaSPlanOut])
+@router.get("/plans", response_model=list[SaaSPlanOut])
 async def list_plans(
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
@@ -105,15 +115,21 @@ async def list_plans(
     plans = await subscription_service.list_plans(db)
     return [
         SaaSPlanOut(
-            id=str(p.id), name=p.name, tier=p.tier, price_cents=p.price_cents,
-            max_users=p.max_users, max_resume_processing=p.max_resume_processing,
-            max_ai_requests=p.max_ai_requests, max_storage_mb=p.max_storage_mb,
+            id=str(p.id),
+            name=p.name,
+            tier=p.tier,
+            price_cents=p.price_cents,
+            max_users=p.max_users,
+            max_resume_processing=p.max_resume_processing,
+            max_ai_requests=p.max_ai_requests,
+            max_storage_mb=p.max_storage_mb,
             is_active=p.is_active,
-        ) for p in plans
+        )
+        for p in plans
     ]
 
 
-@router.get("/feature-flags", response_model=List[FeatureFlagOut])
+@router.get("/feature-flags", response_model=list[FeatureFlagOut])
 async def list_feature_flags(
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
@@ -121,8 +137,13 @@ async def list_feature_flags(
     flags = await feature_flag_service.list_flags(db)
     return [
         FeatureFlagOut(
-            id=str(f.id), key=f.key, name=f.name, module=f.module, is_enabled=f.is_enabled
-        ) for f in flags
+            id=str(f.id),
+            key=f.key,
+            name=f.name,
+            module=f.module,
+            is_enabled=f.is_enabled,
+        )
+        for f in flags
     ]
 
 
@@ -137,7 +158,10 @@ async def update_feature_flag(
     if not flag:
         raise HTTPException(status_code=404, detail="Feature flag not found")
     return FeatureFlagOut(
-        id=str(flag.id), key=flag.key, name=flag.name, module=flag.module,
+        id=str(flag.id),
+        key=flag.key,
+        name=flag.name,
+        module=flag.module,
         is_enabled=flag.is_enabled,
     )
 
@@ -157,7 +181,7 @@ async def set_org_flag_override(
     return {"ok": True}
 
 
-@router.get("/platform-settings", response_model=List[dict])
+@router.get("/platform-settings", response_model=list[dict])
 async def list_platform_settings(
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
@@ -169,22 +193,26 @@ async def list_platform_settings(
     ]
 
 
-@router.post("/platform-settings", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/platform-settings", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def create_platform_setting(
     setting: PlatformSettingIn,
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
 ):
     ps = PlatformSetting(
-        key=setting.key, value=setting.value,
-        description=setting.description, is_public=setting.is_public,
+        key=setting.key,
+        value=setting.value,
+        description=setting.description,
+        is_public=setting.is_public,
     )
     db.add(ps)
     await db.commit()
     return {"id": str(ps.id), "key": ps.key}
 
 
-@router.get("/announcements", response_model=List[dict])
+@router.get("/announcements", response_model=list[dict])
 async def list_announcements(
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
@@ -192,8 +220,11 @@ async def list_announcements(
     result = await db.execute(select(SystemAnnouncement))
     return [
         {
-            "id": str(a.id), "title": a.title, "body": a.body,
-            "severity": a.severity, "is_active": a.is_active,
+            "id": str(a.id),
+            "title": a.title,
+            "body": a.body,
+            "severity": a.severity,
+            "is_active": a.is_active,
         }
         for a in result.scalars().all()
     ]
@@ -206,22 +237,30 @@ async def create_announcement(
     db: AsyncSession = Depends(get_db),
 ):
     a = SystemAnnouncement(
-        title=ann.title, body=ann.body, severity=ann.severity,
-        is_active=ann.is_active, starts_at=ann.starts_at, ends_at=ann.ends_at,
+        title=ann.title,
+        body=ann.body,
+        severity=ann.severity,
+        is_active=ann.is_active,
+        starts_at=ann.starts_at,
+        ends_at=ann.ends_at,
     )
     db.add(a)
     await db.commit()
     return {"id": str(a.id)}
 
 
-@router.get("/global-roles", response_model=List[dict])
+@router.get("/global-roles", response_model=list[dict])
 async def list_global_roles(
     user: User = Depends(require_role("Super Admin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(GlobalRole))
     return [
-        {"id": str(r.id), "name": r.name, "description": r.description,
-         "is_system": r.is_system}
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "description": r.description,
+            "is_system": r.is_system,
+        }
         for r in result.scalars().all()
     ]

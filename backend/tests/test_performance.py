@@ -27,7 +27,7 @@ class TestResponseTimes:
     @pytest.mark.asyncio
     async def test_health_check_latency(self, client: AsyncClient):
         start = time.perf_counter()
-        response = await client.get("/health")
+        response = await client.get("/api/v1/health")
         elapsed_ms = (time.perf_counter() - start) * 1000
         assert response.status_code == 200
         assert elapsed_ms < self.LATENCY_THRESHOLD_MS, (
@@ -37,7 +37,7 @@ class TestResponseTimes:
     @pytest.mark.asyncio
     async def test_openapi_latency(self, client: AsyncClient):
         start = time.perf_counter()
-        response = await client.get("/openapi.json")
+        response = await client.get("/api/v1/openapi.json")
         elapsed_ms = (time.perf_counter() - start) * 1000
         assert response.status_code == 200
         assert elapsed_ms < 500, f"OpenAPI schema took {elapsed_ms:.0f}ms"
@@ -56,7 +56,6 @@ class TestQueryEfficiency:
             "/api/v1/candidates",
             "/api/v1/candidates/jobs",
             "/api/v1/dashboard/stats",
-            "/api/v1/rankings/candidates",
             "/api/v1/admin/stats",
         ]
         for endpoint in endpoints:

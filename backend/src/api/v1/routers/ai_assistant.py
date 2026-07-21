@@ -1,13 +1,11 @@
 import uuid
-from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job
+from src.models import Candidate, Job, User
 from src.services.ai_assistant import ai_assistant_service
 
 router = APIRouter(prefix="/ai-assistant", tags=["AI Assistant"])
@@ -15,7 +13,7 @@ router = APIRouter(prefix="/ai-assistant", tags=["AI Assistant"])
 
 class InterviewQuestionRequest(BaseModel):
     job_id: str
-    candidate_id: Optional[str] = None
+    candidate_id: str | None = None
     seniority: str = "mid"
     count: int = 10
 
@@ -27,7 +25,9 @@ async def ai_search(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    results = await ai_assistant_service.search_candidates(db, q, user.organization_id, limit)
+    results = await ai_assistant_service.search_candidates(
+        db, q, user.organization_id, limit
+    )
     return {"query": q, "results": results}
 
 
@@ -41,7 +41,9 @@ async def summarize_resume(
     candidate = await db.get(Candidate, candidate_id)
     if not candidate or candidate.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    summary = await ai_assistant_service.summarize_resume(candidate, force_regenerate=force)
+    summary = await ai_assistant_service.summarize_resume(
+        candidate, force_regenerate=force
+    )
     return {"candidate_id": str(candidate_id), "summary": summary}
 
 
@@ -92,4 +94,8 @@ async def skill_gap(
     if not job or job.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Job not found")
     analysis = await ai_assistant_service.analyze_skill_gap(candidate, job)
-    return {"candidate_id": str(candidate_id), "job_id": str(job_id), "analysis": analysis}
+    return {
+        "candidate_id": str(candidate_id),
+        "job_id": str(job_id),
+        "analysis": analysis,
+    }

@@ -2,17 +2,15 @@ import csv
 import io
 import json
 import uuid
-from typing import Optional
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select, desc, func
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate, Job, Application
+from src.models import Application, Candidate, User
 from src.services.ranking import RankingService
-
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 ranking_service = RankingService()
@@ -47,7 +45,9 @@ async def export_candidates(
     ]
 
     if fmt == "json":
-        return PlainTextResponse(json.dumps(rows, indent=2, default=str), media_type="application/json")
+        return PlainTextResponse(
+            json.dumps(rows, indent=2, default=str), media_type="application/json"
+        )
 
     buf = io.StringIO()
     if rows:
@@ -113,7 +113,9 @@ async def export_applications(
     ]
 
     if fmt == "json":
-        return PlainTextResponse(json.dumps(rows, indent=2, default=str), media_type="application/json")
+        return PlainTextResponse(
+            json.dumps(rows, indent=2, default=str), media_type="application/json"
+        )
 
     buf = io.StringIO()
     if rows:
