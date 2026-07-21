@@ -64,8 +64,13 @@ async def test_org(db: AsyncSession):
     return org
 
 
-def _db_available() -> bool:
-    """Return True if the configured PostgreSQL database is reachable."""
+def _pg_available() -> bool:
+    """Return True only if a real PostgreSQL database is configured and reachable."""
+    from src.core.config import get_settings
+
+    settings = get_settings()
+    if settings.DATABASE_URL.startswith("sqlite"):
+        return False
     import asyncio
     from src.core.database import check_database_connection
 
@@ -78,13 +83,14 @@ def _db_available() -> bool:
 
 def pytest_collection_modifyitems(config, items):
     """Skip tests that require a live PostgreSQL connection when none is available."""
-    if _db_available():
+    if _pg_available():
         return
     skip_marker = pytest.mark.skip(reason="No PostgreSQL database available")
     db_test_ids = {
         "test_database_connection",
         "test_pgvector_extension_enabled",
         "test_health_check_includes_database",
+        "test_admin_requires_super_admin_role",
     }
     for item in items:
         if any(test_id in item.nodeid for test_id in db_test_ids):

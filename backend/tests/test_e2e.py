@@ -16,9 +16,15 @@ from httpx import ASGITransport, AsyncClient
 from src.main import app
 
 
-def _db_reachable() -> bool:
+def _pg_available() -> bool:
+    from src.core.config import get_settings
+
+    settings = get_settings()
+    if settings.DATABASE_URL.startswith("sqlite"):
+        return False
     import asyncio
     from src.core.database import check_database_connection
+
     try:
         asyncio.run(check_database_connection())
         return True
@@ -27,7 +33,7 @@ def _db_reachable() -> bool:
 
 
 requires_db = pytest.mark.skipif(
-    not _db_reachable(), reason="No PostgreSQL database available"
+    not _pg_available(), reason="No PostgreSQL database available"
 )
 
 
