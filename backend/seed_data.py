@@ -1,47 +1,68 @@
 """
-Seed script using the application's own services to create demo data.
+Seed script using the application's ORM models to create demo data.
 Run with:  python seed_data.py  (uses DATABASE_URL from .env or environment)
 """
-import sys
-import uuid
 import asyncio
 from datetime import datetime, timedelta
-from sqlalchemy import text
-from src.core.database import AsyncSessionLocal
+
+from src.core.database import AsyncSessionLocal, init_db
 from src.core.security import hash_password
+from src.models.auth import Role
+from src.models.user import User
+from src.models.organization import Organization
+from src.models.job import Job, JobStatus
+from src.models.candidate import Candidate
+from src.models.application import Application
+from src.models.recruiter import Tag, CandidateTag
+
 
 async def seed():
+    await init_db()
+
     async with AsyncSessionLocal() as db:
-        # Use argon2 hashing via application's security module
         hashed_pw = hash_password("password123")
 
-        # Get existing roles
-        result = await db.execute(text("SELECT id, name FROM roles"))
-        role_rows = result.fetchall()
-        roles = {r[1]: r[0] for r in role_rows}
+        # Roles
+        default_roles = [
+            ("Super Admin", "Full system access"),
+            ("Company Admin", "Organization administrator"),
+            ("Recruiter", "Recruiter role"),
+            ("Hiring Manager", "Hiring manager role"),
+            ("Candidate", "Candidate role"),
+        ]
+        role_map = {}
+        for name, desc in default_roles:
+            role = Role(name=name, description=desc)
+            db.add(role)
+            await db.flush()
+            role_map[name] = role
+        await db.flush()
 
         # Organization
-        org_id = uuid.uuid4()
-        await db.execute(
-            text("INSERT INTO organizations (id, name, is_active) VALUES (:id, :name, :active)"),
-            {"id": org_id, "name": "TechCorp Inc.", "active": True}
-        )
+        org = Organization(name="TechCorp Inc.", is_active=True)
+        db.add(org)
+        await db.flush()
 
         # Users
-        user_ids = []
         users_data = [
             ("admin@techcorp.com", "Sarah Johnson", "Company Admin"),
             ("recruiter@techcorp.com", "Mike Chen", "Recruiter"),
             ("hiring@techcorp.com", "Emily Davis", "Hiring Manager"),
         ]
+        user_ids = []
         for email, name, role_name in users_data:
-            uid = uuid.uuid4()
-            now = datetime.utcnow()
-            await db.execute(
-                text("INSERT INTO users (id, email, hashed_password, full_name, is_active, is_verified, role_id, organization_id, created_at, updated_at) VALUES (:id, :email, :pw, :name, true, true, :rid, :oid, :now, :now)"),
-                {"id": uid, "email": email, "pw": hashed_pw, "name": name, "rid": roles[role_name], "oid": org_id, "now": now}
+            user = User(
+                email=email,
+                hashed_password=hashed_pw,
+                full_name=name,
+                is_active=True,
+                is_verified=True,
+                role_id=role_map[role_name].id,
+                organization_id=org.id,
             )
-            user_ids.append(uid)
+            db.add(user)
+            await db.flush()
+            user_ids.append(user.id)
 
         # Jobs
         jobs_data = [
@@ -54,14 +75,22 @@ async def seed():
         ]
         job_ids = []
         for title, loc, emp, status, days in jobs_data:
-            jid = uuid.uuid4()
             now = datetime.utcnow() - timedelta(days=days)
-            await db.execute(
-                text("""INSERT INTO jobs (id, title, description, location, employment_type, status, is_published, organization_id, created_by_id, created_at, updated_at) 
-                         VALUES (:id, :title, :desc, :loc, :emp, :status, true, :oid, :uid, :now, :now)"""),
-                {"id": jid, "title": title, "desc": f"Job description for {title}", "loc": loc, "emp": emp, "status": status, "oid": org_id, "uid": user_ids[0], "now": now}
+            job = Job(
+                title=title,
+                description=f"Job description for {title}",
+                location=loc,
+                employment_type=emp,
+                status=status,
+                is_published=True,
+                organization_id=org.id,
+                created_by_id=user_ids[0],
+                created_at=now,
+                updated_at=now,
             )
-            job_ids.append(jid)
+            db.add(job)
+            await db.flush()
+            job_ids.append(job.id)
 
         # Candidates
         candidates_data = [
@@ -76,13 +105,19 @@ async def seed():
         ]
         candidate_ids = []
         for fn, ln, email, status, days, skills in candidates_data:
-            cid = uuid.uuid4()
             now = datetime.utcnow() - timedelta(days=days)
-            await db.execute(
-                text("INSERT INTO candidates (id, first_name, last_name, email, status, organization_id, created_at, updated_at) VALUES (:id, :fn, :ln, :email, :status, :oid, :now, :now)"),
-                {"id": cid, "fn": fn, "ln": ln, "email": email, "status": status, "oid": org_id, "now": now}
+            candidate = Candidate(
+                first_name=fn,
+                last_name=ln,
+                email=email,
+                status=status,
+                organization_id=org.id,
+                created_at=now,
+                updated_at=now,
             )
-            candidate_ids.append(cid)
+            db.add(candidate)
+            await db.flush()
+            candidate_ids.append(candidate.id)
 
         # Tags
         all_skills = set()
@@ -90,21 +125,27 @@ async def seed():
             for s in skills:
                 all_skills.add(s)
         tag_map = {}
+        now = datetime.utcnow()
         for skill in all_skills:
-            tid = uuid.uuid4()
-            await db.execute(
-                text("INSERT INTO tags (id, name, organization_id) VALUES (:id, :name, :oid)"),
-                {"id": tid, "name": skill, "oid": org_id}
+            tag = Tag(
+                name=skill,
+                organization_id=org.id,
+                created_at=now,
+                updated_at=now,
             )
-            tag_map[skill] = tid
+            db.add(tag)
+            await db.flush()
+            tag_map[skill] = tag
 
         # Candidate Tags
         for (fn, ln, email, status, days, skills), cid in zip(candidates_data, candidate_ids):
             for skill in skills:
-                await db.execute(
-                    text("INSERT INTO candidate_tags (candidate_id, tag_id) VALUES (:cid, :tid)"),
-                    {"cid": cid, "tid": tag_map[skill]}
+                ct = CandidateTag(
+                    candidate_id=cid,
+                    tag_id=tag_map[skill].id,
+                    created_at=now,
                 )
+                db.add(ct)
 
         # Applications
         for i, (fn, ln, email, status, days, skills) in enumerate(candidates_data):
@@ -113,13 +154,20 @@ async def seed():
             cid = candidate_ids[i]
             now = datetime.utcnow() - timedelta(days=days)
             score = round(60 + (hash(email) % 40), 1)
-            await db.execute(
-                text("INSERT INTO applications (id, candidate_id, job_id, organization_id, status, score, created_at, updated_at) VALUES (:id, :cid, :jid, :oid, :status, :score, :now, :now)"),
-                {"id": uuid.uuid4(), "cid": cid, "jid": jid, "oid": org_id, "status": stage, "score": score, "now": now}
+            app = Application(
+                candidate_id=cid,
+                job_id=jid,
+                organization_id=org.id,
+                status=stage,
+                score=score,
+                is_active=True,
+                created_at=now,
+                updated_at=now,
             )
+            db.add(app)
 
         await db.commit()
-        print("✅ Seed data created successfully!")
+        print("Seed data created successfully!")
         print(f"   Organization: TechCorp Inc.")
         print(f"   Users: 3 (admin@techcorp.com, recruiter@techcorp.com, hiring@techcorp.com)")
         print(f"   Jobs: {len(jobs_data)}")
@@ -128,5 +176,6 @@ async def seed():
         print(f"   Applications: {len(candidates_data)}")
         print()
         print("Login credentials for all users: password123")
+
 
 asyncio.run(seed())
