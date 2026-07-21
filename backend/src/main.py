@@ -101,6 +101,12 @@ def create_app() -> FastAPI:
 
         app.include_router(get_metrics_router())
 
+    @app.on_event("startup")
+    async def _init_db():
+        from src.core.database import init_db
+
+        await init_db()
+
     return app
 
 
