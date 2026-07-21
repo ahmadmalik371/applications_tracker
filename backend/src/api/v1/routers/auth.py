@@ -2,6 +2,8 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.api.dependencies import get_current_user
+from src.models import User
 from src.api.v1.schemas.auth import (
     EmailVerificationRequest,
     LoginRequest,
@@ -27,6 +29,23 @@ from src.services.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.get("/me")
+async def get_me(current_user: User = Depends(get_current_user)):
+    """Return the current authenticated user's profile with role."""
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
+        "role": {
+            "id": str(current_user.role.id),
+            "name": current_user.role.name,
+        },
+        "is_active": current_user.is_active,
+        "is_verified": current_user.is_verified,
+    }
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=TokenResponse)

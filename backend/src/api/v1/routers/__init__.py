@@ -16,10 +16,11 @@ from .ai_assistant import router as ai_assistant
 from .recommendations import router as recommendations
 from .ml_management import router as ml_management
 from .audit import router as audit
+from .public_jobs import router as public_jobs
 
 __all__ = [
     "health", "auth", "candidates", "rules", "rankings", "recruiter",
     "dashboard", "workflow", "interviews", "notifications", "templates_router",
     "analytics", "reports", "websocket", "admin", "ai_assistant",
-    "recommendations", "ml_management", "audit",
+    "recommendations", "ml_management", "audit", "public_jobs",
 ]

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Briefcase,
   Users,
@@ -10,14 +11,17 @@ import {
   Clock,
   ChevronRight,
   AlertCircle,
+  UserPlus,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStats } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
+import { AuthGuard } from "@/components/auth-guard";
+import apiClient from "@/lib/api-client";
 
 const PIPELINE_STAGES = [
   { key: "Applied", label: "Applied", color: "bg-sky-500" },
@@ -28,7 +32,7 @@ const PIPELINE_STAGES = [
   { key: "Rejected", label: "Rejected", color: "bg-rose-500" },
 ];
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { data, isLoading, isError, refetch } = useDashboardStats();
 
   if (isError) {
@@ -162,6 +166,14 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
   );
 }
 

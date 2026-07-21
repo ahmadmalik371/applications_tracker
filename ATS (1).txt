@@ -1,0 +1,164 @@
+# Applicant Tracking System (ATS) Implementation Plan
+
+This document continues the ATS roadmap from the Business Rule Engine onward with implementation detail, delivery scope, and acceptance criteria for each major capability.
+
+## 1. Business Rule Engine
+- Implement configurable hiring rules for experience, skills, education, location, and seniority.
+- Support rule outputs such as Passed/Failed, reason text, and score impact.
+- Store rules per organization so recruiters can customize evaluation logic.
+- Backend scope: rule models, API endpoints, validation, and persistence.
+- Frontend scope: rule editor, condition builder, and preview panel.
+- Testing scope: unit tests for evaluation logic and integration tests for API behavior.
+- Acceptance criteria: rules can be created, edited, and evaluated through APIs with unit tests covering edge cases.
+
+## 2. Feature Engineering Service
+- Create a reusable feature extraction layer that produces structured signals such as experience score, skills coverage, keyword overlap, and location compatibility.
+- Ensure features are deterministic and serializable for both batch scoring and real-time ranking.
+- Backend scope: feature extraction service, normalized schema, and caching strategy.
+- Frontend scope: display of feature signals and score breakdowns where needed.
+- Testing scope: regression tests for feature generation and data quality checks.
+- Acceptance criteria: the service returns a normalized feature vector and is covered by unit tests and documentation.
+
+## 3. AI Ranking Engine
+- Build a scoring pipeline that chains business rules, feature engineering, and ranking logic in a decoupled way.
+- Define clear interfaces for rule evaluation, feature extraction, and ranking inference so the model can be upgraded without rewriting the API.
+- Backend scope: ranking service, model adapter, score persistence, and async scoring jobs.
+- Frontend scope: ranked candidate lists, score badges, and ranking history views.
+- Testing scope: offline evaluation and comparison tests for model behavior.
+- Acceptance criteria: the ranking engine produces a score, rank order, and supporting metadata for candidate evaluation.
+
+## 4. Explainable AI (XAI)
+- Provide each ranking result with match score, confidence score, strengths, weaknesses, skill analysis, and recruiter-facing recommendations.
+- Structure explanation output so it can be reused across candidate detail views, search results, and exports.
+- Backend scope: explanation generation service and reusable explanation objects.
+- Frontend scope: AI insight panels and explanation summaries in candidate interfaces.
+- Testing scope: validation tests for explanation quality and formatting.
+- Acceptance criteria: explanation payloads are consistent, readable, and tested for both standard and edge-case results.
+
+## 5. Candidate Ranking APIs
+- Expose endpoints for ranking, re-ranking, history lookup, comparison, filtering, and export.
+- Add pagination, sorting, filtering, and result caching for efficient use in recruiter workflows.
+- Backend scope: ranking API routes, request validation, and response shaping.
+- Frontend scope: list and detail views that consume ranking data efficiently.
+- Testing scope: API contract tests and performance checks for pagination and filtering.
+- Acceptance criteria: API responses are documented, stable, and support both UI usage and bulk operations.
+
+## 6. Recruiter Dashboard
+- Build a dashboard with widgets for active jobs, applications, rankings, pipeline health, analytics summaries, and notifications.
+- Handle loading, error, empty, and retry states for a reliable recruiter experience.
+- Backend scope: dashboard aggregation endpoints and role-based data shaping.
+- Frontend scope: responsive dashboard layout and widget components.
+- Testing scope: component tests for loading and empty states.
+- Acceptance criteria: the dashboard loads successfully across desktop and tablet breakpoints and reflects live backend state.
+
+## 7. Candidate Detail Page
+- Display resume information, AI score and explanation, skill summary, application timeline, notes, and tags.
+- Support actions such as bookmark, reject, shortlist, and note-taking without leaving the page.
+- Backend scope: candidate detail endpoints, action handlers, and related metadata.
+- Frontend scope: full detail page layout with action controls and state updates.
+- Testing scope: interaction tests for actions and data rendering.
+- Acceptance criteria: the detail page provides all essential candidate context in a single view and maintains state correctly.
+
+## 8. Resume Viewer
+- Include an embedded PDF viewer, metadata panel, keyword highlighting, and an AI insight sidebar.
+- Optimize document loading for large resumes and large batches of candidates.
+- Backend scope: resume retrieval and metadata APIs.
+- Frontend scope: embedded viewer and document navigation improvements.
+- Testing scope: rendering tests and large-file handling checks.
+- Acceptance criteria: documents render efficiently and support both standard and oversized files.
+
+## 9. Candidate Search
+- Implement hybrid search using PostgreSQL full-text search for lexical matching and pgvector-based semantic search for contextual similarity.
+- Apply filters for experience, skills, location, and organization scope to keep search results relevant.
+- Backend scope: search service, ranking fusion, and index tuning.
+- Frontend scope: search refinement controls and result previews.
+- Testing scope: search relevance tests and latency benchmarks.
+- Acceptance criteria: search results return quickly and are documented with tuning guidance and performance benchmarks.
+
+## 10. Candidate Comparison
+- Provide a table-based comparison view that includes scores, skills, education, experience, and status attributes.
+- Support side-by-side evaluation for recruiter decision-making and interview shortlisting.
+- Backend scope: comparison payload generation and filtering logic.
+- Frontend scope: comparison table, sorting, and export actions.
+- Testing scope: UI tests for layout, sorting, and selection behavior.
+- Acceptance criteria: the comparison view is responsive, readable, and backed by automated tests.
+
+## 11. Hiring Workflow
+- Model configurable stages from Applied to Accepted or Rejected, with transition history and audit-friendly state changes.
+- Support workflow updates through APIs and UI actions.
+- Backend scope: stage transition engine, workflow history, and validation rules.
+- Frontend scope: workflow controls and status update actions.
+- Testing scope: transition tests for allowed and blocked state changes.
+- Acceptance criteria: stage changes are logged, validated, and tested for both successful and blocked transitions.
+
+## 12. Kanban Board
+- Deliver a drag-and-drop board for applications, with bulk actions, counters, filters, and real-time state updates.
+- Ensure actions remain consistent even when multiple recruiters are working in parallel.
+- Backend scope: grouped application endpoints and optimistic update handling.
+- Frontend scope: Kanban board interaction, drag-and-drop behavior, and live updates.
+- Testing scope: interaction tests for drag-and-drop and bulk actions.
+- Acceptance criteria: board interactions are intuitive, responsive, and covered by UI tests.
+
+## 13. Interview Management
+- Support interview scheduling, interview types, panel assignment, calendar integration, feedback collection, and rating submission.
+- Keep interview data linked to the candidate and application record for consistent tracking.
+- Backend scope: interviews, interviewers, and feedback APIs.
+- Frontend scope: scheduling form, feedback forms, and calendar views.
+- Testing scope: workflow tests for scheduling, updating, and completion.
+- Acceptance criteria: interviews can be created, updated, and completed through a complete end-to-end workflow.
+
+## 14. Recruiter Notes
+- Enable rich text notes, private and team-visible notes, attachments, mentions, edit history, and audit logs.
+- Protect notes with organization and role-based visibility rules.
+- Backend scope: note storage, authorization, and audit log integration.
+- Frontend scope: rich text editor and note history timeline.
+- Testing scope: permission and version-history tests.
+- Acceptance criteria: notes are stored securely, versioned, and accessible to authorized recruiters.
+
+## 15. Candidate Tags
+- Add CRUD support for labels such as High Priority, Referral, and Follow Up.
+- Allow tags to be assigned to candidates and reused across workflows.
+- Backend scope: tag models, assignment endpoints, and search support.
+- Frontend scope: tag picker and tag management UI.
+- Testing scope: CRUD and assignment tests.
+- Acceptance criteria: tags can be created, updated, deleted, and applied to candidates through the API and UI.
+
+## 16. Notification Service
+- Deliver notifications through email, in-app messaging, and WebSocket channels.
+- Process notifications asynchronously with Celery, retries, and failure handling.
+- Backend scope: notification event bus, delivery workers, and retry policies.
+- Frontend scope: in-app notification center and live updates.
+- Testing scope: delivery and retry tests.
+- Acceptance criteria: notifications are delivered reliably and can be tracked by recipient and event type.
+
+## 17. Email Template Management
+- Store reusable email templates in the database with variable substitution for personalized outreach.
+- Allow admins to manage templates through a protected interface.
+- Backend scope: template CRUD and rendering engine.
+- Frontend scope: template editor and preview screen.
+- Testing scope: rendering and permission tests.
+- Acceptance criteria: templates can be created, updated, previewed, and used in outbound workflows.
+
+## 18. Real-Time Functionality
+- Use WebSockets for live notifications, status updates, and dashboard syncing.
+- Keep the UI in sync when candidate status, pipeline stage, or recruiter actions change.
+- Backend scope: WebSocket gateway and event subscriptions.
+- Frontend scope: live refresh handling and UI synchronization.
+- Testing scope: connection and event propagation tests.
+- Acceptance criteria: real-time updates are visible without full page refresh and do not break the current session state.
+
+## 19. Analytics
+- Track funnel conversion, time-to-hire, source performance, recruiter productivity, and AI ranking accuracy.
+- Make analytics available as summary views and drill-down reports for decision-making.
+- Backend scope: aggregation queries, metric definitions, and scheduled jobs.
+- Frontend scope: charts, filters, and KPI cards.
+- Testing scope: reporting accuracy and aggregation tests.
+- Acceptance criteria: reports reflect meaningful metrics and are backed by reliable data aggregation.
+
+## 20. Reporting
+- Support export to PDF, Excel, and CSV, along with scheduled report generation.
+- Provide report templates for hiring performance, candidate ranking, and recruiter activity.
+- Backend scope: export generation service and scheduler integration.
+- Frontend scope: report controls and export actions.
+- Testing scope: export format validation and scheduling tests.
+- Acceptance criteria: exports are generated successfully and scheduled jobs run without manual intervention.

@@ -10,7 +10,7 @@ from src.models.application import ApplicationStage
 from src.models.job import JobStatus
 
 
-router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats")

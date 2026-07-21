@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  redirect("/dashboard");
+  // Public-facing landing page redirects to job board
+  redirect("/jobs");
 }

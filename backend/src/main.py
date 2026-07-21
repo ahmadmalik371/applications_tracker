@@ -5,6 +5,7 @@ from src.api.v1.routers import (
     health, auth, candidates, rules, rankings, recruiter, dashboard,
     workflow, interviews, notifications, templates_router, analytics, reports,
     websocket, admin, ai_assistant, recommendations, ml_management, audit,
+    public_jobs,
 )
 from src.core.config import get_settings
 from src.core.exceptions import setup_exception_handlers
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(recommendations, prefix=settings.API_V1_STR)
     app.include_router(ml_management, prefix=settings.API_V1_STR)
     app.include_router(audit, prefix=settings.API_V1_STR)
+    app.include_router(public_jobs, prefix=settings.API_V1_STR)
 
     if settings.PROMETHEUS_ENABLED:
         from src.core.metrics import get_metrics_router

@@ -1,0 +1,59 @@
+# Applicant Tracking System (ATS) Implementation Plan
+
+## 1. Infrastructure: Redis and Celery
+- Celery worker & Celery Beat configuration.
+- Background task setup.
+- Retry policies and structured logging.
+- Graceful shutdown mechanisms.
+
+## 2. Authentication Database Schema
+- SQLAlchemy models and Alembic migrations.
+- Tables: Users, Organizations, Roles, Permissions, Sessions, Refresh Tokens, Email Verification Tokens, Password Reset Tokens.
+
+## 3. Authentication Module
+- Features: Register, Login, Logout, Refresh Token, JWT Auth, Argon2 hashing, Email Verification, Password Reset.
+- Components: Backend APIs, Validation, Unit/Integration tests, API_SPEC.md updates.
+
+## 4. Role-Based Access Control (RBAC)
+- Roles: Super Admin, Company Admin, Recruiter, Hiring Manager, Candidate.
+- Feature: Protect API endpoints, permission checking, and tests.
+
+## 5. Organization Management
+- Features: CRUD Organizations, User invitations, Departments, Teams, Company Logo, Settings.
+- Components: DB, Backend, Frontend, Tests, Documentation.
+
+## 6. Job Management Database Schema
+- SQLAlchemy models and Alembic migrations.
+- Tables: Jobs, Departments, Employment Types, Locations, Job Skills, Requirements, Benefits.
+
+## 7. Job Management Implementation
+- Features: CRUD/Archive/Publish/Close/Duplicate Jobs.
+- Components: Validation, Pagination, Filtering, Sorting, Search, Tests, API_SPEC.md updates.
+
+## 8. Candidate Management Database Schema
+- SQLAlchemy models and Alembic migrations.
+- Tables: Candidate Profile, Education, Experience, Skills, Projects, Certifications, Languages, Social Links, Application History.
+
+## 9. Candidate Portal
+- Features: Registration, Dashboard, Profile, Resume Upload, Portfolio, GitHub/LinkedIn links, Application Tracking.
+- Components: Frontend, Backend, API, Tests.
+
+## 10. Resume Upload
+- Features: Upload PDF/DOCX, max size validation, virus scan placeholder.
+- Storage: PostgreSQL metadata, local development storage (ready for cloud migration).
+
+## 11. Resume Parsing
+- Features: PDF/DOCX support, OCR fallback, extract entities (Name, Email, Phone, etc.).
+- Infrastructure: Celery background processing, structured JSON storage in PostgreSQL, Tests.
+
+## 12. Embedding Service
+- Infrastructure: pgvector in PostgreSQL.
+- Functionality: Embeddings for Resumes, Job Descriptions, Projects, Skills.
+- Documentation & Tests.
+
+## 13. Semantic Candidate Matching
+- Pipeline: Job Description -> Embedding -> Vector Similarity Search -> Top 100 Candidates.
+- Optimization: PostgreSQL indexing, performance benchmarking, documentation.
+
+## Finalization
+- Code review, application execution, issue resolution, and Git commit.
