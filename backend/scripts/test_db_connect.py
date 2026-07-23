@@ -3,7 +3,7 @@ import asyncpg
 import os
 
 async def main():
-    url = os.environ.get('DATABASE_URL', 'postgresql://ats_user:13851098@localhost:5432/ats_db')
+    url = os.environ.get('DATABASE_URL', 'postgresql://ats_user:13851098@localhost:5433/ats_db')
     print('Testing DB URL:', url)
     try:
         conn = await asyncpg.connect(url)
