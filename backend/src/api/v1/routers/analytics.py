@@ -11,7 +11,7 @@ from src.models.application import ApplicationStage
 from src.models.job import JobStatus
 
 
-router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
+router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
 @router.get("/funnel")

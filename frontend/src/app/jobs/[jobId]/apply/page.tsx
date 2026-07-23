@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { Briefcase, MapPin, Clock, Upload, CheckCircle, AlertCircle, Loader2 } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AuthGuard } from "@/components/auth-guard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -33,7 +34,6 @@ interface JobDetail {
 
 export default function ApplyPage() {
   const params = useParams();
-  const router = useRouter();
   const jobId = params.jobId as string;
 
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -97,54 +97,61 @@ export default function ApplyPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
-          <p className="text-sm text-zinc-500">Loading job details...</p>
+      <AuthGuard>
+        <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
+            <p className="text-sm text-zinc-500">Loading job details...</p>
+          </div>
         </div>
-      </div>
+      </AuthGuard>
     );
   }
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="py-12">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-              <CheckCircle className="h-8 w-8 text-emerald-600" />
-            </div>
-            <CardTitle className="mb-2">Application Submitted!</CardTitle>
-            <CardDescription className="mb-6">
-              Your application has been received. Our AI will review your resume and the team will be in touch.
-            </CardDescription>
-            <Link href="/jobs">
-              <Button variant="outline">Browse More Jobs</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthGuard>
+        <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="py-12">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+              <CardTitle className="mb-2">Application Submitted!</CardTitle>
+              <CardDescription className="mb-6">
+                Your application has been received. Our AI will review your resume and the team will be in touch.
+              </CardDescription>
+              <Link href="/jobs">
+                <Button variant="outline">Browse More Jobs</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </AuthGuard>
     );
   }
 
   if (!job) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="py-12">
-            <AlertCircle className="mx-auto mb-4 h-10 w-10 text-rose-500" />
-            <CardTitle className="mb-2">Job Not Found</CardTitle>
-            <Link href="/jobs">
-              <Button variant="outline">View All Jobs</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthGuard>
+        <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="py-12">
+              <AlertCircle className="mx-auto mb-4 h-10 w-10 text-rose-500" />
+              <CardTitle className="mb-2">Job Not Found</CardTitle>
+              <Link href="/jobs">
+                <Button variant="outline">View All Jobs</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </AuthGuard>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <AuthGuard>
+      <div className="min-h-screen bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-6 sm:px-6">
           <Link href="/jobs" className="text-sm text-zinc-500 hover:text-zinc-900">&larr; Back to jobs</Link>
@@ -249,5 +256,6 @@ export default function ApplyPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

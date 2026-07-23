@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,12 +14,18 @@ async def create_job(
     title: str,
     description: Optional[str] = None,
     location: Optional[str] = None,
+    department: Optional[str] = None,
+    salary_range: Optional[str] = None,
+    deadline: Optional[datetime] = None,
     employment_type: Optional[str] = None,
 ) -> Job:
     job = Job(
         title=title,
         description=description,
         location=location,
+        department=department,
+        salary_range=salary_range,
+        deadline=deadline,
         employment_type=employment_type,
         organization_id=organization_id,
         created_by_id=created_by_id,
@@ -142,10 +149,32 @@ async def get_application(session: AsyncSession, application_id: uuid.UUID) -> O
     return result.scalar_one_or_none()
 
 
-async def list_applications(session: AsyncSession, organization_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[Application]:
-    result = await session.execute(
-        select(Application).where(Application.organization_id == organization_id).limit(limit).offset(offset)
-    )
+from sqlalchemy.orm import joinedload
+
+async def list_applications(
+    session: AsyncSession, 
+    organization_id: uuid.UUID, 
+    job_id: Optional[uuid.UUID] = None,
+    candidate_id: Optional[uuid.UUID] = None,
+    status: Optional[str] = None,
+    limit: int = 50, 
+    offset: int = 0
+) -> list[Application]:
+    query = select(Application).where(Application.organization_id == organization_id)
+    
+    if job_id:
+        query = query.where(Application.job_id == job_id)
+    if candidate_id:
+        query = query.where(Application.candidate_id == candidate_id)
+    if status:
+        query = query.where(Application.status == status)
+        
+    query = query.options(
+        joinedload(Application.candidate),
+        joinedload(Application.job)
+    ).limit(limit).offset(offset)
+    
+    result = await session.execute(query)
     return result.scalars().all()
 
 

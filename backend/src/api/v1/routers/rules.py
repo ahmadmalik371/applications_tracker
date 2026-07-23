@@ -11,7 +11,7 @@ from src.models.rules import RuleType, RuleOperator
 from src.services.rules import RuleEvaluationService
 
 
-router = APIRouter(prefix="/api/v1/rules", tags=["rules"])
+router = APIRouter(prefix="/rules", tags=["rules"])
 rule_service = RuleEvaluationService()
 
 
@@ -39,8 +39,8 @@ class RuleUpdate(BaseModel):
 
 
 class RuleResponse(BaseModel):
-    id: str
-    organization_id: str
+    id: uuid.UUID
+    organization_id: uuid.UUID
     name: str
     description: Optional[str]
     rule_type: str

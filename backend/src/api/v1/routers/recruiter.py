@@ -11,7 +11,7 @@ from src.models import User, Candidate
 from src.models.recruiter import Tag, CandidateTag, Note, NoteVersion
 
 
-router = APIRouter(prefix="/api/v1/recruiter", tags=["recruiter"])
+router = APIRouter(prefix="/recruiter", tags=["recruiter"])
 
 
 # Pydantic schemas - Tags
@@ -29,8 +29,8 @@ class TagUpdate(BaseModel):
 
 
 class TagResponse(BaseModel):
-    id: str
-    organization_id: str
+    id: uuid.UUID
+    organization_id: uuid.UUID
     name: str
     description: Optional[str]
     color: str
@@ -54,9 +54,9 @@ class NoteUpdate(BaseModel):
 
 
 class NoteResponse(BaseModel):
-    id: str
-    candidate_id: str
-    author_id: str
+    id: uuid.UUID
+    candidate_id: uuid.UUID
+    author_id: uuid.UUID
     content: str
     is_private: bool
     mentions: Optional[List[str]]

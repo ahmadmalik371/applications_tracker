@@ -12,14 +12,14 @@ from src.services.ranking import RankingService
 from src.services.explainability import ExplainabilityService
 
 
-router = APIRouter(prefix="/api/v1/rankings", tags=["rankings"])
+router = APIRouter(prefix="/rankings", tags=["rankings"])
 ranking_service = RankingService()
 explainability_service = ExplainabilityService()
 
 
 # Pydantic schemas
 class CandidateRankingResponse(BaseModel):
-    candidate_id: str
+    candidate_id: uuid.UUID
     candidate_name: str
     candidate_email: str
     match_score: float
@@ -30,7 +30,7 @@ class CandidateRankingResponse(BaseModel):
 
 
 class JobRankingResponse(BaseModel):
-    job_id: str
+    job_id: uuid.UUID
     job_title: str
     job_location: Optional[str]
     match_score: float
@@ -57,13 +57,13 @@ class ReRankRequest(BaseModel):
 
 
 class CompareRequest(BaseModel):
-    candidate_ids: List[str]
-    job_id: str
+    candidate_ids: List[uuid.UUID]
+    job_id: uuid.UUID
 
 
 class RankingHistoryResponse(BaseModel):
-    id: str
-    job_id: str
+    id: uuid.UUID
+    job_id: uuid.UUID
     embedding_weight: float
     feature_weight: float
     candidate_count: int

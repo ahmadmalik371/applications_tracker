@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import datetime
 import enum
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, ForeignKey, Text
+from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from pgvector.sqlalchemy import Vector
 
@@ -24,6 +25,9 @@ class Job(BaseModel):
     title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    department: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    salary_range: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    deadline: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     employment_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[JobStatus] = mapped_column(String(50), default=JobStatus.DRAFT.value, nullable=False)

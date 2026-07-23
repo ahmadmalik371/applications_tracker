@@ -4,7 +4,7 @@ import enum
 import uuid
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, ForeignKey, Float
+from sqlalchemy import String, Boolean, ForeignKey, Float, JSON
 from sqlalchemy.dialects.postgresql import UUID
 
 from .base import BaseModel
@@ -26,6 +26,7 @@ class Application(BaseModel):
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"), index=True, nullable=False)
     status: Mapped[ApplicationStage] = mapped_column(String(50), default=ApplicationStage.APPLIED.value, nullable=False)
     score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    ai_explanation: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False)
 

@@ -18,6 +18,7 @@ interface AuthContextType {
   signup: (organization_name: string, email: string, password: string, full_name?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  getToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   logout: () => {},
   isAuthenticated: false,
+  getToken: () => null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -79,6 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const getToken = useCallback(() => {
+    return localStorage.getItem("access_token");
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -88,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         logout,
         isAuthenticated: !!user,
+        getToken,
       }}
     >
       {children}

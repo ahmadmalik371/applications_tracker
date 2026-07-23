@@ -21,80 +21,6 @@ from src.services.search import find_similar_candidates, find_matching_jobs, hyb
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 
-# Job endpoints
-@router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
-async def create_job_endpoint(
-    request: JobCreate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
-    db=Depends(get_db),
-):
-    job = await create_job(
-        db,
-        organization_id=current_user.organization_id,
-        created_by_id=current_user.id,
-        title=request.title,
-        description=request.description,
-        location=request.location,
-        employment_type=request.employment_type,
-    )
-    
-    # Trigger embedding generation for job
-    if job.description:
-        from src.tasks import generate_job_embedding_task
-        generate_job_embedding_task.delay(str(job.id), job.description)
-    
-    return job
-
-
-@router.get("/jobs/{job_id}", response_model=JobResponse)
-async def get_job_endpoint(
-    job_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    job = await get_job(db, job_id)
-    if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    return job
-
-
-@router.get("/jobs", response_model=list[JobResponse])
-async def list_jobs_endpoint(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    jobs = await list_jobs(db, organization_id=current_user.organization_id, limit=limit, offset=skip)
-    return jobs
-
-
-@router.put("/jobs/{job_id}", response_model=JobResponse)
-async def update_job_endpoint(
-    job_id: UUID,
-    request: JobUpdate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter")),
-    db=Depends(get_db),
-):
-    job = await get_job(db, job_id)
-    if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
-    updated_job = await update_job(db, job_id, **request.dict(exclude_unset=True))
-    return updated_job
-
-
-@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_job_endpoint(
-    job_id: UUID,
-    current_user: User = Depends(require_role("Company Admin")),
-    db=Depends(get_db),
-):
-    job = await get_job(db, job_id)
-    if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
-    await delete_job(db, job_id)
 
 
 # Candidate endpoints
@@ -166,66 +92,7 @@ async def delete_candidate_endpoint(
     await delete_candidate(db, candidate_id)
 
 
-# Application endpoints
-@router.post("/applications", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
-async def create_application_endpoint(
-    request: ApplicationCreate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
-    db=Depends(get_db),
-):
-    job = await get_job(db, request.job_id)
-    if not job or job.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    
-    candidate = await get_candidate(db, request.candidate_id)
-    if not candidate or candidate.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    
-    application = await create_application(
-        db,
-        organization_id=current_user.organization_id,
-        job_id=request.job_id,
-        candidate_id=request.candidate_id,
-    )
-    return application
 
-
-@router.get("/applications/{application_id}", response_model=ApplicationResponse)
-async def get_application_endpoint(
-    application_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    application = await get_application(db, application_id)
-    if not application or application.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
-    return application
-
-
-@router.get("/applications", response_model=list[ApplicationResponse])
-async def list_applications_endpoint(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    applications = await list_applications(db, organization_id=current_user.organization_id, limit=limit, offset=skip)
-    return applications
-
-
-@router.put("/applications/{application_id}", response_model=ApplicationResponse)
-async def update_application_endpoint(
-    application_id: UUID,
-    request: ApplicationUpdate,
-    current_user: User = Depends(require_role("Company Admin", "Recruiter", "Hiring Manager")),
-    db=Depends(get_db),
-):
-    application = await get_application(db, application_id)
-    if not application or application.organization_id != current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
-    
-    updated_application = await update_application(db, application_id, **request.dict(exclude_unset=True))
-    return updated_application
 
 
 # Resume upload endpoint

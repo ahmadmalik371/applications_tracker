@@ -14,7 +14,7 @@ from src.models import User, Candidate, Job, Application
 from src.services.ranking import RankingService
 
 
-router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
+router = APIRouter(prefix="/reports", tags=["reports"])
 ranking_service = RankingService()
 
 

@@ -7,6 +7,9 @@ class JobBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=5000)
     location: Optional[str] = Field(None, max_length=255)
+    department: Optional[str] = Field(None, max_length=255)
+    salary_range: Optional[str] = Field(None, max_length=100)
+    deadline: Optional[datetime] = None
     employment_type: Optional[str] = Field(None, max_length=100)
 
 
@@ -59,6 +62,7 @@ class CandidateResponse(CandidateBase):
     id: UUID
     status: str
     resume_url: Optional[str]
+    parsed_data: Optional[dict] = None
     organization_id: UUID
     created_at: datetime
     updated_at: datetime
@@ -85,10 +89,14 @@ class ApplicationResponse(ApplicationBase):
     id: UUID
     status: str
     score: Optional[float]
+    ai_explanation: Optional[dict] = None
     is_active: bool
     organization_id: UUID
     created_at: datetime
     updated_at: datetime
+    
+    candidate: Optional['CandidateResponse'] = None
+    job: Optional['JobResponse'] = None
 
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Briefcase,
   Users,
@@ -13,15 +13,15 @@ import {
   AlertCircle,
   UserPlus,
   CheckCircle2,
+  Mail,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDashboardStats } from "@/lib/hooks";
+import { useDashboardStats, useNotifications, useUnreadNotificationCount } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { AuthGuard } from "@/components/auth-guard";
-import apiClient from "@/lib/api-client";
 
 const PIPELINE_STAGES = [
   { key: "Applied", label: "Applied", color: "bg-sky-500" },
@@ -34,6 +34,8 @@ const PIPELINE_STAGES = [
 
 function DashboardContent() {
   const { data, isLoading, isError, refetch } = useDashboardStats();
+  const { data: notifications, isLoading: isNotificationsLoading } = useNotifications(5);
+  const { data: unreadCount, isLoading: isUnreadCountLoading } = useUnreadNotificationCount();
 
   if (isError) {
     return (
@@ -49,7 +51,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <DashboardHeader />
+      <DashboardHeader unreadCount={unreadCount} isUnreadCountLoading={isUnreadCountLoading} />
       <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Stat cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -60,6 +62,7 @@ function DashboardContent() {
             icon={<Briefcase className="h-5 w-5" />}
             accent="bg-sky-50 text-sky-700"
             isLoading={isLoading}
+            href="/dashboard/jobs"
           />
           <StatCard
             label="Total Candidates"
@@ -68,6 +71,7 @@ function DashboardContent() {
             icon={<Users className="h-5 w-5" />}
             accent="bg-emerald-50 text-emerald-700"
             isLoading={isLoading}
+            href="/dashboard/candidates"
           />
           <StatCard
             label="Applications"
@@ -75,6 +79,7 @@ function DashboardContent() {
             icon={<FileText className="h-5 w-5" />}
             accent="bg-amber-50 text-amber-700"
             isLoading={isLoading}
+            href="/dashboard/applications"
           />
           <StatCard
             label="New This Week"
@@ -82,6 +87,7 @@ function DashboardContent() {
             icon={<TrendingUp className="h-5 w-5" />}
             accent="bg-violet-50 text-violet-700"
             isLoading={isLoading}
+            href="/dashboard/candidates?filter=new_this_week"
           />
         </div>
 
@@ -111,7 +117,7 @@ function DashboardContent() {
               <CardDescription>Recent activity</CardDescription>
             </CardHeader>
             <CardContent>
-              <NotificationsWidget data={data} isLoading={isLoading} />
+              <NotificationsWidget data={notifications} isLoading={isLoading || isNotificationsLoading} />
             </CardContent>
           </Card>
         </div>
@@ -124,8 +130,10 @@ function DashboardContent() {
                 <CardTitle>Active Jobs</CardTitle>
                 <CardDescription>Recently posted positions</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" className="gap-1 text-zinc-500">
-                View all <ChevronRight className="h-4 w-4" />
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-zinc-500">
+                <Link href="/dashboard/jobs">
+                  View all <ChevronRight className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -147,8 +155,10 @@ function DashboardContent() {
                 <CardTitle>Recent Candidates</CardTitle>
                 <CardDescription>Latest applicants</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" className="gap-1 text-zinc-500">
-                View all <ChevronRight className="h-4 w-4" />
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-zinc-500">
+                <Link href="/dashboard/candidates">
+                  View all <ChevronRight className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -177,7 +187,13 @@ export default function DashboardPage() {
   );
 }
 
-function DashboardHeader() {
+function DashboardHeader({
+  unreadCount,
+  isUnreadCountLoading,
+}: {
+  unreadCount?: number;
+  isUnreadCountLoading: boolean;
+}) {
   return (
     <header className="border-b border-zinc-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -186,16 +202,20 @@ function DashboardHeader() {
           <p className="text-sm text-zinc-500">AI-powered applicant tracking</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white">
-              3
-            </span>
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <Link href="/dashboard/notifications">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white">
+                {isUnreadCountLoading ? "..." : unreadCount ?? 0}
+              </span>
+            </Link>
           </Button>
-          <Button size="sm" className="gap-2 bg-zinc-900 text-white hover:bg-zinc-800">
-            <Briefcase className="h-4 w-4" />
-            <span className="hidden sm:inline">New Job</span>
+          <Button asChild size="sm" className="gap-2 bg-zinc-900 text-white hover:bg-zinc-800">
+            <Link href="/dashboard/new-job">
+              <Briefcase className="h-4 w-4" />
+              <span className="hidden sm:inline">New Job</span>
+            </Link>
           </Button>
         </div>
       </div>
@@ -211,6 +231,7 @@ function StatCard({
   icon,
   accent,
   isLoading,
+  href,
 }: {
   label: string;
   value?: number;
@@ -219,9 +240,10 @@ function StatCard({
   icon: React.ReactNode;
   accent: string;
   isLoading: boolean;
+  href?: string;
 }) {
-  return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+  const content = (
+    <Card className={cn("overflow-hidden transition-all hover:shadow-md h-full", href && "hover:border-zinc-300 hover:ring-1 hover:ring-zinc-200")}>
       <CardContent className="flex items-center gap-4">
         <div className={cn("flex h-12 w-12 items-center justify-center rounded-lg", accent)}>
           {icon}
@@ -245,6 +267,11 @@ function StatCard({
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return <Link href={href} className="block h-full">{content}</Link>;
+  }
+  return content;
 }
 
 function PipelineWidget({ pipeline }: { pipeline: Record<string, number> }) {
@@ -281,7 +308,17 @@ function NotificationsWidget({
   data,
   isLoading,
 }: {
-  data: { recent_candidates: Array<{ id: string; first_name: string | null; last_name: string | null; email: string; status: string; created_at: string | null }>; recent_jobs: Array<{ id: string; title: string; status: string; location: string | null; created_at: string | null }> } | undefined;
+  data: Array<{
+    id: string;
+    organization_id: string;
+    user_id?: string;
+    channel: string;
+    title: string;
+    message: string;
+    status: string;
+    read: boolean;
+    created_at: string | null;
+  }> | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -294,20 +331,18 @@ function NotificationsWidget({
     );
   }
 
-  const items: Array<{ icon: React.ReactNode; text: string; time: string }> = [];
+  const items: Array<{ icon: React.ReactNode; title: string; message: string; time: string }> = [];
 
-  for (const c of data?.recent_candidates ?? []) {
+  for (const notification of data ?? []) {
     items.push({
-      icon: <Users className="h-4 w-4 text-emerald-600" />,
-      text: `New candidate: ${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
-      time: c.created_at ? formatRelative(c.created_at) : "",
-    });
-  }
-  for (const j of data?.recent_jobs ?? []) {
-    items.push({
-      icon: <Briefcase className="h-4 w-4 text-sky-600" />,
-      text: `Job posted: ${j.title}`,
-      time: j.created_at ? formatRelative(j.created_at) : "",
+      icon: notification.channel === "email" ? (
+        <Mail className="h-4 w-4 text-sky-600" />
+      ) : (
+        <Bell className="h-4 w-4 text-emerald-600" />
+      ),
+      title: notification.title,
+      message: notification.message,
+      time: notification.created_at ? formatRelative(notification.created_at) : "",
     });
   }
 
@@ -328,7 +363,8 @@ function NotificationsWidget({
             {item.icon}
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-zinc-700">{item.text}</p>
+            <p className="text-sm font-medium text-zinc-700">{item.title}</p>
+            <p className="text-sm text-zinc-500">{item.message}</p>
             {item.time && (
               <p className="flex items-center gap-1 text-xs text-zinc-400">
                 <Clock className="h-3 w-3" /> {item.time}
@@ -359,9 +395,10 @@ function RecentJobsWidget({
   return (
     <div className="space-y-2">
       {jobs.map((job) => (
-        <div
+        <Link
           key={job.id}
-          className="group flex items-center justify-between rounded-lg border border-zinc-100 p-3 transition-colors hover:border-zinc-200 hover:bg-zinc-50"
+          href={`/dashboard/jobs/${job.id}`}
+          className="group flex items-center justify-between rounded-lg border border-zinc-100 p-3 transition-colors hover:border-zinc-200 hover:bg-zinc-50 block"
         >
           <div className="flex flex-col gap-1">
             <span className="font-medium text-zinc-900">{job.title}</span>
@@ -374,7 +411,7 @@ function RecentJobsWidget({
             <StatusBadge status={job.status} />
             <ArrowUpRight className="h-4 w-4 text-zinc-300 transition-colors group-hover:text-zinc-600" />
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
@@ -401,9 +438,10 @@ function RecentCandidatesWidget({
       {candidates.map((c) => {
         const initials = `${c.first_name?.[0] ?? ""}${c.last_name?.[0] ?? ""}`.toUpperCase();
         return (
-          <div
+          <Link
             key={c.id}
-            className="group flex items-center justify-between rounded-lg border border-zinc-100 p-3 transition-colors hover:border-zinc-200 hover:bg-zinc-50"
+            href={`/dashboard/candidates/${c.id}`}
+            className="group flex items-center justify-between rounded-lg border border-zinc-100 p-3 transition-colors hover:border-zinc-200 hover:bg-zinc-50 block"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 text-xs font-semibold text-white">
@@ -420,7 +458,7 @@ function RecentCandidatesWidget({
               <StatusBadge status={c.status} />
               <ArrowUpRight className="h-4 w-4 text-zinc-300 transition-colors group-hover:text-zinc-600" />
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

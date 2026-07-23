@@ -6,6 +6,7 @@ import { Briefcase, MapPin, Clock, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AuthGuard } from "@/components/auth-guard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -58,8 +59,9 @@ export default function PublicJobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white">
+    <AuthGuard>
+      <div className="min-h-screen bg-zinc-50">
+        <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-6 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900">
@@ -130,5 +132,6 @@ export default function PublicJobsPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

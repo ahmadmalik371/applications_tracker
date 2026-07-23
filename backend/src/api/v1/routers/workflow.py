@@ -9,7 +9,7 @@ from src.models import User
 from src.services.workflow import WorkflowService
 
 
-router = APIRouter(prefix="/api/v1/workflow", tags=["workflow"])
+router = APIRouter(prefix="/workflow", tags=["workflow"])
 workflow_service = WorkflowService()
 
 
@@ -22,8 +22,8 @@ class StageCreate(BaseModel):
 
 
 class StageResponse(BaseModel):
-    id: str
-    organization_id: str
+    id: uuid.UUID
+    organization_id: uuid.UUID
     name: str
     order: int
     is_rejection_stage: bool
@@ -41,10 +41,10 @@ class TransitionRequest(BaseModel):
 
 
 class HistoryResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     from_stage: Optional[str]
     to_stage: str
-    changed_by_id: Optional[str]
+    changed_by_id: Optional[uuid.UUID]
     note: Optional[str]
     created_at: Optional[str]
 

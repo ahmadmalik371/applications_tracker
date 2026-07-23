@@ -10,7 +10,7 @@ from src.models import User
 from src.services.notification import NotificationService, EmailTemplateService
 
 
-router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["notifications"])
 notification_service = NotificationService()
 template_service = EmailTemplateService()
 
@@ -21,14 +21,14 @@ class NotificationCreate(BaseModel):
     title: str
     message: str
     channel: str = "in_app"
-    user_id: Optional[str] = None
+    user_id: Optional[uuid.UUID] = None
     metadata: Optional[dict] = None
 
 
 class NotificationResponse(BaseModel):
-    id: str
-    organization_id: str
-    user_id: Optional[str]
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    user_id: Optional[uuid.UUID]
     channel: str
     title: str
     message: str
@@ -50,8 +50,8 @@ class TemplateCreate(BaseModel):
 
 
 class TemplateResponse(BaseModel):
-    id: str
-    organization_id: str
+    id: uuid.UUID
+    organization_id: uuid.UUID
     name: str
     subject: str
     body: str
@@ -81,7 +81,7 @@ async def create_notification(
         current_user.organization_id,
         req.title,
         req.message,
-        user_id=uuid.UUID(req.user_id) if req.user_id else current_user.id,
+        user_id=req.user_id if req.user_id else current_user.id,
         channel=req.channel,
         metadata=req.metadata,
     )
@@ -137,7 +137,7 @@ async def mark_all_read(
 
 # --- Email template endpoints ---
 
-templates_router = APIRouter(prefix="/api/v1/email-templates", tags=["email-templates"])
+templates_router = APIRouter(prefix="/email-templates", tags=["email-templates"])
 
 
 @templates_router.post("", response_model=TemplateResponse, status_code=status.HTTP_201_CREATED)

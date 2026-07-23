@@ -51,8 +51,8 @@ async def find_duplicates(
 
 
 class MergeRequest(BaseModel):
-    primary_id: str
-    duplicate_id: str
+    primary_id: uuid.UUID
+    duplicate_id: uuid.UUID
 
 
 @router.post("/merge", status_code=status.HTTP_200_OK)
@@ -63,7 +63,7 @@ async def merge_candidates(
 ):
     try:
         merged = await duplicate_detection_service.merge_candidates(
-            db, uuid.UUID(req.primary_id), uuid.UUID(req.duplicate_id)
+            db, req.primary_id, req.duplicate_id
         )
     except ValueError:
         raise HTTPException(status_code=404, detail="Candidate not found")

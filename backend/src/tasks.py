@@ -2,6 +2,7 @@ import asyncio
 import json
 from src.core.celery_app import app
 from src.core.database import AsyncSessionLocal
+from sqlalchemy import select
 from src.models import Candidate
 from src.services.parsing import parse_resume_from_file
 from src.services.candidates import update_candidate
@@ -9,7 +10,7 @@ from src.services.embedding import generate_candidate_embedding, generate_job_em
 
 
 @app.task(bind=True, max_retries=3, queue="parsing")
-def parse_resume_task(self, candidate_id: str, resume_url: str):
+def parse_resume_task(self, candidate_id: str, resume_url: str, job_id: str = None):
     """Celery task to parse resume asynchronously."""
     try:
         # Run async function in sync context
@@ -22,7 +23,7 @@ def parse_resume_task(self, candidate_id: str, resume_url: str):
         )
         
         # Trigger embedding generation
-        generate_candidate_embedding_task.delay(candidate_id, json.dumps(parsed_data))
+        generate_candidate_embedding_task.delay(candidate_id, json.dumps(parsed_data), job_id)
         
         return {
             "status": "success",
@@ -41,7 +42,7 @@ def parse_resume_task(self, candidate_id: str, resume_url: str):
 
 
 @app.task(bind=True, max_retries=3, queue="embeddings")
-def generate_candidate_embedding_task(self, candidate_id: str, parsed_data_json: str):
+def generate_candidate_embedding_task(self, candidate_id: str, parsed_data_json: str, job_id: str = None):
     """Celery task to generate candidate embedding."""
     try:
         loop = asyncio.get_event_loop()
@@ -56,7 +57,15 @@ def generate_candidate_embedding_task(self, candidate_id: str, parsed_data_json:
         loop.run_until_complete(
             _store_candidate_embedding(candidate_id, embedding)
         )
-        
+        # If job_id is provided, trigger scoring
+        if job_id:
+            # We don't have a scoring task yet, but we will call it here when created
+            # score_application_task.delay(candidate_id, job_id)
+            pass
+
+        # Send websocket notification
+        loop.run_until_complete(_notify_candidate_update(candidate_id))
+
         return {
             "status": "success",
             "candidate_id": candidate_id,
@@ -151,3 +160,22 @@ async def _store_job_embedding(job_id: str, embedding: list):
         except Exception as e:
             raise ValueError(f"Failed to store job embedding: {str(e)}")
 
+
+async def _notify_candidate_update(candidate_id: str):
+    """Send websocket notification when candidate data is updated."""
+    from src.api.v1.routers.websocket import manager
+    from src.models import Candidate
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Candidate).where(Candidate.id == candidate_id)
+        )
+        candidate = result.scalar_one_or_none()
+        if candidate:
+            org_id = str(candidate.organization_id)
+            await manager.broadcast({
+                "type": "CANDIDATE_UPDATED",
+                "organization_id": org_id,
+                "candidate_id": candidate_id,
+                "message": f"Resume processing complete for {candidate.first_name} {candidate.last_name}"
+            })

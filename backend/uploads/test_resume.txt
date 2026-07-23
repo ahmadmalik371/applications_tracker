@@ -1,0 +1,11 @@
+John Doe
+Software Engineer
+Email: john.doe@email.com
+Phone: +1-555-1234
+
+Skills: Python, FastAPI, PostgreSQL, Docker, AWS, Machine Learning, NLP, Deep Learning
+Experience: 7 years
+Education: Master's Degree in Computer Science
+Location: San Francisco, CA
+
+Summary: Experienced software engineer with expertise in AI/ML, Python development, and cloud infrastructure.

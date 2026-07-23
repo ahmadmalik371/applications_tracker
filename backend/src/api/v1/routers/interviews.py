@@ -10,18 +10,18 @@ from src.models import User
 from src.services.interview import InterviewService
 
 
-router = APIRouter(prefix="/api/v1/interviews", tags=["interviews"])
+router = APIRouter(prefix="/interviews", tags=["interviews"])
 interview_service = InterviewService()
 
 
 class ScheduleRequest(BaseModel):
-    application_id: str
+    application_id: uuid.UUID
     interview_type: str = "phone"
     scheduled_at: str
     duration_minutes: int = 60
     location: Optional[str] = None
     meeting_link: Optional[str] = None
-    panelist_ids: Optional[List[str]] = None
+    panelist_ids: Optional[List[uuid.UUID]] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -37,9 +37,9 @@ class StatusUpdate(BaseModel):
 
 
 class InterviewResponse(BaseModel):
-    id: str
-    application_id: str
-    organization_id: str
+    id: uuid.UUID
+    application_id: uuid.UUID
+    organization_id: uuid.UUID
     interview_type: str
     scheduled_at: datetime
     duration_minutes: int
@@ -47,16 +47,16 @@ class InterviewResponse(BaseModel):
     meeting_link: Optional[str]
     status: str
     notes: Optional[str]
-    created_by_id: Optional[str]
+    created_by_id: Optional[uuid.UUID]
 
     class Config:
         from_attributes = True
 
 
 class FeedbackResponse(BaseModel):
-    id: str
-    interview_id: str
-    panelist_id: str
+    id: uuid.UUID
+    interview_id: uuid.UUID
+    panelist_id: uuid.UUID
     rating: int
     strengths: Optional[str]
     weaknesses: Optional[str]
@@ -75,10 +75,10 @@ async def schedule_interview(
     session: AsyncSession = Depends(get_db),
 ):
     """Schedule a new interview."""
-    panelist_ids = [uuid.UUID(p) for p in req.panelist_ids] if req.panelist_ids else None
+    panelist_ids = req.panelist_ids if req.panelist_ids else None
     interview = await interview_service.schedule_interview(
         session,
-        uuid.UUID(req.application_id),
+        req.application_id,
         current_user.organization_id,
         req.interview_type,
         req.scheduled_at,

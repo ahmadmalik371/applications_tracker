@@ -19,7 +19,7 @@ router = APIRouter(prefix="/public", tags=["Public"])
 
 
 class PublicJobResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     title: str
     description: Optional[str] = None
     location: Optional[str] = None
@@ -32,9 +32,9 @@ class PublicJobResponse(BaseModel):
 
 
 class ApplicationResponse(BaseModel):
-    id: str
-    candidate_id: str
-    job_id: str
+    id: uuid.UUID
+    candidate_id: uuid.UUID
+    job_id: uuid.UUID
     status: str
     score: Optional[float] = None
     created_at: Optional[datetime] = None

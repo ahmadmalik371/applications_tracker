@@ -25,12 +25,48 @@ export interface DashboardStats {
   }>;
 }
 
+export interface NotificationItem {
+  id: string;
+  organization_id: string;
+  user_id?: string;
+  channel: string;
+  title: string;
+  message: string;
+  status: string;
+  read: boolean;
+  created_at: string | null;
+}
+
 export function useDashboardStats() {
   return useQuery<DashboardStats>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
       const { data } = await apiClient.get<DashboardStats>("/dashboard/stats");
       return data;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useNotifications(limit = 5) {
+  return useQuery<NotificationItem[]>({
+    queryKey: ["notifications", limit],
+    queryFn: async () => {
+      const { data } = await apiClient.get<NotificationItem[]>("/notifications", {
+        params: { limit },
+      });
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useUnreadNotificationCount() {
+  return useQuery<number>({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ unread: number }>("/notifications/unread-count");
+      return data.unread;
     },
     refetchInterval: 30_000,
   });

@@ -14,8 +14,8 @@ router = APIRouter(prefix="/ai-assistant", tags=["AI Assistant"])
 
 
 class InterviewQuestionRequest(BaseModel):
-    job_id: str
-    candidate_id: Optional[str] = None
+    job_id: uuid.UUID
+    candidate_id: Optional[uuid.UUID] = None
     seniority: str = "mid"
     count: int = 10
 
@@ -64,12 +64,12 @@ async def interview_questions(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    job = await db.get(Job, uuid.UUID(req.job_id))
+    job = await db.get(Job, req.job_id)
     if not job or job.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Job not found")
     candidate = None
     if req.candidate_id:
-        candidate = await db.get(Candidate, uuid.UUID(req.candidate_id))
+        candidate = await db.get(Candidate, req.candidate_id)
         if not candidate or candidate.organization_id != user.organization_id:
             raise HTTPException(status_code=404, detail="Candidate not found")
     questions = await ai_assistant_service.generate_interview_questions(
