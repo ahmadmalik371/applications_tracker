@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,7 @@ class FeatureFlagService:
         self,
         session: AsyncSession,
         key: str,
-        organization_id: Optional[uuid.UUID] = None,
+        organization_id: uuid.UUID | None = None,
     ) -> bool:
         flag = await self._get_flag(session, key)
         if not flag:
@@ -29,7 +28,7 @@ class FeatureFlagService:
 
         return flag.is_enabled
 
-    async def get_flag(self, session: AsyncSession, key: str) -> Optional[FeatureFlag]:
+    async def get_flag(self, session: AsyncSession, key: str) -> FeatureFlag | None:
         return await self._get_flag(session, key)
 
     async def list_flags(self, session: AsyncSession) -> list[FeatureFlag]:
@@ -40,7 +39,7 @@ class FeatureFlagService:
 
     async def set_flag(
         self, session: AsyncSession, key: str, is_enabled: bool
-    ) -> Optional[FeatureFlag]:
+    ) -> FeatureFlag | None:
         flag = await self._get_flag(session, key)
         if not flag:
             return None
@@ -55,7 +54,7 @@ class FeatureFlagService:
         organization_id: uuid.UUID,
         flag_key: str,
         is_enabled: bool,
-    ) -> Optional[OrgFeatureFlagOverride]:
+    ) -> OrgFeatureFlagOverride | None:
         flag = await self._get_flag(session, flag_key)
         if not flag:
             return None
@@ -73,13 +72,15 @@ class FeatureFlagService:
         await session.refresh(override)
         return override
 
-    async def _get_flag(self, session: AsyncSession, key: str) -> Optional[FeatureFlag]:
-        result = await session.execute(select(FeatureFlag).where(FeatureFlag.key == key))
+    async def _get_flag(self, session: AsyncSession, key: str) -> FeatureFlag | None:
+        result = await session.execute(
+            select(FeatureFlag).where(FeatureFlag.key == key)
+        )
         return result.scalar_one_or_none()
 
     async def _get_override(
         self, session: AsyncSession, organization_id: uuid.UUID, flag_id: uuid.UUID
-    ) -> Optional[OrgFeatureFlagOverride]:
+    ) -> OrgFeatureFlagOverride | None:
         result = await session.execute(
             select(OrgFeatureFlagOverride).where(
                 OrgFeatureFlagOverride.organization_id == organization_id,

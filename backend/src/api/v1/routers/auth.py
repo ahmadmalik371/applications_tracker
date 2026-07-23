@@ -2,26 +2,24 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.api.dependencies import get_current_user
-from src.models import User
+from src.api.dependencies import get_current_user, get_db
 from src.api.v1.schemas.auth import (
     EmailVerificationRequest,
     LoginRequest,
     LogoutRequest,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
-    RegisterRequest,
     RefreshTokenRequest,
+    RegisterRequest,
     TokenResponse,
 )
-from src.api.dependencies import get_db
 from src.core.security import create_access_token, create_refresh_token
+from src.models import User
 from src.services.auth import (
     authenticate_user,
-    create_email_verification_token,
+    create_organization_with_admin,
     create_password_reset_token,
     create_refresh_token_record,
-    create_organization_with_admin,
     get_refresh_token_record,
     invalidate_refresh_token,
     reset_password_with_token,
@@ -38,7 +36,9 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "id": str(current_user.id),
         "email": current_user.email,
         "full_name": current_user.full_name,
-        "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
+        "organization_id": str(current_user.organization_id)
+        if current_user.organization_id
+        else None,
         "role": {
             "id": str(current_user.role.id),
             "name": current_user.role.name,
@@ -48,7 +48,9 @@ async def get_me(current_user: User = Depends(get_current_user)):
     }
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=TokenResponse)
+@router.post(
+    "/register", status_code=status.HTTP_201_CREATED, response_model=TokenResponse
+)
 async def register(request: RegisterRequest, db=Depends(get_db)):
     organization, user = await create_organization_with_admin(
         db,
@@ -69,7 +71,9 @@ async def register(request: RegisterRequest, db=Depends(get_db)):
 async def login(request: LoginRequest, db=Depends(get_db)):
     user = await authenticate_user(db, request.email, request.password)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+        )
 
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token()
@@ -81,8 +85,14 @@ async def login(request: LoginRequest, db=Depends(get_db)):
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(request: RefreshTokenRequest, db=Depends(get_db)):
     token_record = await get_refresh_token_record(db, request.refresh_token)
-    if not token_record or token_record.is_revoked or token_record.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    if (
+        not token_record
+        or token_record.is_revoked
+        or token_record.expires_at < datetime.utcnow()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        )
 
     user = token_record.user
     access_token = create_access_token(str(user.id))
@@ -103,11 +113,16 @@ async def logout(request: LogoutRequest, db=Depends(get_db)):
 @router.post("/password-reset/request")
 async def request_password_reset(request: PasswordResetRequest, db=Depends(get_db)):
     await create_password_reset_token(db, request.email)
-    return {"success": True, "message": "If an account exists for that email, a password reset token has been issued."}
+    return {
+        "success": True,
+        "message": "If an account exists for that email, a password reset token has been issued.",
+    }
 
 
 @router.post("/password-reset/confirm")
-async def confirm_password_reset(request: PasswordResetConfirmRequest, db=Depends(get_db)):
+async def confirm_password_reset(
+    request: PasswordResetConfirmRequest, db=Depends(get_db)
+):
     await reset_password_with_token(db, request.token, request.new_password)
     return {"success": True}
 

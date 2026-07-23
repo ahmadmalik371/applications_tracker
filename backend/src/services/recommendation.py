@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Candidate, Job
+from src.models import Job
 from src.services.ranking import RankingService
 from src.services.search import hybrid_search_candidates
 
@@ -24,9 +24,11 @@ class RecommendationEngine:
         job_id: uuid.UUID,
         organization_id: uuid.UUID,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         job_result = await session.execute(
-            select(Job).where(Job.id == job_id).where(Job.organization_id == organization_id)
+            select(Job)
+            .where(Job.id == job_id)
+            .where(Job.organization_id == organization_id)
         )
         job = job_result.scalar_one_or_none()
         if not job:

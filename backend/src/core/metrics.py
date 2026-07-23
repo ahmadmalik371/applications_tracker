@@ -8,11 +8,11 @@ Exposes a /metrics endpoint compatible with Prometheus scraping. Tracks:
     - Celery task count (counter by task name/status)
     - Database connection pool usage (gauge)
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from fastapi import APIRouter, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -21,14 +21,15 @@ logger = logging.getLogger(__name__)
 
 try:
     from prometheus_client import (
+        CONTENT_TYPE_LATEST,
+        REGISTRY,
         CollectorRegistry,
         Counter,
         Gauge,
         Histogram,
-        REGISTRY,
         generate_latest,
-        CONTENT_TYPE_LATEST,
     )
+
     _HAS_PROMETHEUS = True
 except ImportError:
     _HAS_PROMETHEUS = False

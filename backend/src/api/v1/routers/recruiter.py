@@ -1,15 +1,14 @@
 import uuid
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
 from datetime import datetime
 
-from src.api.dependencies import get_current_user, get_db
-from src.models import User, Candidate
-from src.models.recruiter import Tag, CandidateTag, Note, NoteVersion
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.dependencies import get_current_user, get_db
+from src.models import Candidate, User
+from src.models.recruiter import CandidateTag, Note, NoteVersion, Tag
 
 router = APIRouter(prefix="/recruiter", tags=["recruiter"])
 
@@ -17,22 +16,22 @@ router = APIRouter(prefix="/recruiter", tags=["recruiter"])
 # Pydantic schemas - Tags
 class TagCreate(BaseModel):
     name: str
-    description: Optional[str] = None
-    color: Optional[str] = "blue"
+    description: str | None = None
+    color: str | None = "blue"
 
 
 class TagUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    color: Optional[str] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    color: str | None = None
+    is_active: bool | None = None
 
 
 class TagResponse(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID
     name: str
-    description: Optional[str]
+    description: str | None
     color: str
     is_active: bool
 
@@ -44,13 +43,13 @@ class TagResponse(BaseModel):
 class NoteCreate(BaseModel):
     content: str
     is_private: bool = False
-    mentions: Optional[List[str]] = None
-    attachments: Optional[List[str]] = None
+    mentions: list[str] | None = None
+    attachments: list[str] | None = None
 
 
 class NoteUpdate(BaseModel):
-    content: Optional[str] = None
-    is_private: Optional[bool] = None
+    content: str | None = None
+    is_private: bool | None = None
 
 
 class NoteResponse(BaseModel):
@@ -59,8 +58,8 @@ class NoteResponse(BaseModel):
     author_id: uuid.UUID
     content: str
     is_private: bool
-    mentions: Optional[List[str]]
-    attachments: Optional[List[str]]
+    mentions: list[str] | None
+    attachments: list[str] | None
     created_at: datetime
     updated_at: datetime
 
@@ -89,7 +88,7 @@ async def create_tag(
     return tag
 
 
-@router.get("/tags", response_model=List[TagResponse])
+@router.get("/tags", response_model=list[TagResponse])
 async def list_tags(
     skip: int = 0,
     limit: int = 50,
@@ -117,7 +116,9 @@ async def update_tag(
 ):
     """Update a tag."""
     result = await session.execute(
-        select(Tag).where(Tag.id == tag_id).where(Tag.organization_id == current_user.organization_id)
+        select(Tag)
+        .where(Tag.id == tag_id)
+        .where(Tag.organization_id == current_user.organization_id)
     )
     tag = result.scalar_one_or_none()
     if not tag:
@@ -141,7 +142,9 @@ async def delete_tag(
 ):
     """Delete (deactivate) a tag."""
     result = await session.execute(
-        select(Tag).where(Tag.id == tag_id).where(Tag.organization_id == current_user.organization_id)
+        select(Tag)
+        .where(Tag.id == tag_id)
+        .where(Tag.organization_id == current_user.organization_id)
     )
     tag = result.scalar_one_or_none()
     if not tag:
@@ -152,7 +155,9 @@ async def delete_tag(
 
 
 # Candidate tags endpoints
-@router.post("/candidates/{candidate_id}/tags/{tag_id}", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/candidates/{candidate_id}/tags/{tag_id}", status_code=status.HTTP_201_CREATED
+)
 async def add_tag_to_candidate(
     candidate_id: uuid.UUID,
     tag_id: uuid.UUID,
@@ -162,7 +167,9 @@ async def add_tag_to_candidate(
     """Add a tag to a candidate."""
     # Verify candidate exists
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     candidate = candidate_result.scalar_one_or_none()
     if not candidate:
@@ -170,7 +177,9 @@ async def add_tag_to_candidate(
 
     # Verify tag exists and belongs to organization
     tag_result = await session.execute(
-        select(Tag).where(Tag.id == tag_id).where(Tag.organization_id == current_user.organization_id)
+        select(Tag)
+        .where(Tag.id == tag_id)
+        .where(Tag.organization_id == current_user.organization_id)
     )
     tag = tag_result.scalar_one_or_none()
     if not tag:
@@ -195,7 +204,9 @@ async def add_tag_to_candidate(
     await session.commit()
 
 
-@router.delete("/candidates/{candidate_id}/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/candidates/{candidate_id}/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def remove_tag_from_candidate(
     candidate_id: uuid.UUID,
     tag_id: uuid.UUID,
@@ -205,7 +216,9 @@ async def remove_tag_from_candidate(
     """Remove a tag from a candidate."""
     # Verify candidate exists
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     if not candidate_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -225,7 +238,11 @@ async def remove_tag_from_candidate(
 
 
 # Notes endpoints
-@router.post("/candidates/{candidate_id}/notes", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/candidates/{candidate_id}/notes",
+    response_model=NoteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_note(
     candidate_id: uuid.UUID,
     note_data: NoteCreate,
@@ -235,7 +252,9 @@ async def create_note(
     """Create a note on a candidate."""
     # Verify candidate exists
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     if not candidate_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -254,7 +273,7 @@ async def create_note(
     return note
 
 
-@router.get("/candidates/{candidate_id}/notes", response_model=List[NoteResponse])
+@router.get("/candidates/{candidate_id}/notes", response_model=list[NoteResponse])
 async def list_candidate_notes(
     candidate_id: uuid.UUID,
     skip: int = 0,
@@ -265,7 +284,9 @@ async def list_candidate_notes(
     """List notes for a candidate."""
     # Verify candidate exists
     candidate_result = await session.execute(
-        select(Candidate).where(Candidate.id == candidate_id).where(Candidate.organization_id == current_user.organization_id)
+        select(Candidate)
+        .where(Candidate.id == candidate_id)
+        .where(Candidate.organization_id == current_user.organization_id)
     )
     if not candidate_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -274,7 +295,9 @@ async def list_candidate_notes(
         select(Note)
         .where(Note.candidate_id == candidate_id)
         .where(Note.is_deleted == False)
-        .where((Note.is_private == False) | (Note.author_id == current_user.id))  # Show private notes only to author
+        .where(
+            (Note.is_private == False) | (Note.author_id == current_user.id)
+        )  # Show private notes only to author
         .offset(skip)
         .limit(limit)
     )
@@ -300,7 +323,7 @@ async def update_note(
         raise HTTPException(status_code=403, detail="Not authorized to edit this note")
 
     update_data = note_data.dict(exclude_unset=True)
-    
+
     # Store version history if content changed
     if "content" in update_data and update_data["content"] != note.content:
         note_version = NoteVersion(
@@ -333,7 +356,9 @@ async def delete_note(
 
     # Only author or admin can delete
     if note.author_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized to delete this note")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this note"
+        )
 
     note.is_deleted = True
     note.deleted_at = datetime.utcnow()

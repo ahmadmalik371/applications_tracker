@@ -1,10 +1,10 @@
 import json
 import uuid
-from typing import Dict, Any, List, Optional
-from sqlalchemy import select, desc, update
+
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Notification, EmailTemplate
+from src.models import EmailTemplate, Notification
 
 
 class NotificationService:
@@ -16,9 +16,9 @@ class NotificationService:
         organization_id: uuid.UUID,
         title: str,
         message: str,
-        user_id: Optional[uuid.UUID] = None,
+        user_id: uuid.UUID | None = None,
         channel: str = "in_app",
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> Notification:
         notification = Notification(
             organization_id=organization_id,
@@ -35,7 +35,7 @@ class NotificationService:
 
     async def get_user_notifications(
         self, session: AsyncSession, user_id: uuid.UUID, limit: int = 50
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         result = await session.execute(
             select(Notification)
             .where(Notification.user_id == user_id)
@@ -46,7 +46,7 @@ class NotificationService:
 
     async def mark_as_read(
         self, session: AsyncSession, notification_id: uuid.UUID
-    ) -> Optional[Notification]:
+    ) -> Notification | None:
         result = await session.execute(
             select(Notification).where(Notification.id == notification_id)
         )
@@ -67,6 +67,7 @@ class NotificationService:
 
     async def get_unread_count(self, session: AsyncSession, user_id: uuid.UUID) -> int:
         from sqlalchemy import func
+
         result = await session.execute(
             select(func.count(Notification.id))
             .where(Notification.user_id == user_id)
@@ -85,7 +86,7 @@ class EmailTemplateService:
         name: str,
         subject: str,
         body: str,
-        variables: Optional[List[str]] = None,
+        variables: list[str] | None = None,
     ) -> EmailTemplate:
         template = EmailTemplate(
             organization_id=organization_id,
@@ -100,7 +101,7 @@ class EmailTemplateService:
 
     async def list_templates(
         self, session: AsyncSession, organization_id: uuid.UUID
-    ) -> List[EmailTemplate]:
+    ) -> list[EmailTemplate]:
         result = await session.execute(
             select(EmailTemplate)
             .where(EmailTemplate.organization_id == organization_id)
@@ -111,15 +112,15 @@ class EmailTemplateService:
 
     async def get_template(
         self, session: AsyncSession, template_id: uuid.UUID
-    ) -> Optional[EmailTemplate]:
+    ) -> EmailTemplate | None:
         result = await session.execute(
             select(EmailTemplate).where(EmailTemplate.id == template_id)
         )
         return result.scalar_one_or_none()
 
     async def render_template(
-        self, session: AsyncSession, template_id: uuid.UUID, variables: Dict[str, str]
-    ) -> Dict[str, str]:
+        self, session: AsyncSession, template_id: uuid.UUID, variables: dict[str, str]
+    ) -> dict[str, str]:
         """Render an email template by substituting {{variable}} placeholders."""
         template = await self.get_template(session, template_id)
         if not template:

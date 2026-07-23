@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Candidate
@@ -31,8 +30,8 @@ class DuplicateDetectionService:
         self,
         session: AsyncSession,
         organization_id: uuid.UUID,
-        candidate_id: Optional[uuid.UUID] = None,
-    ) -> List[DuplicateMatch]:
+        candidate_id: uuid.UUID | None = None,
+    ) -> list[DuplicateMatch]:
         stmt = select(Candidate).where(Candidate.organization_id == organization_id)
         if candidate_id is not None:
             stmt = stmt.where(Candidate.id == candidate_id)
@@ -40,11 +39,11 @@ class DuplicateDetectionService:
         result = await session.execute(stmt)
         candidates = result.scalars().all()
 
-        matches: List[DuplicateMatch] = []
-        seen: set[Tuple[str, str]] = set()
+        matches: list[DuplicateMatch] = []
+        seen: set[tuple[str, str]] = set()
 
         for i, a in enumerate(candidates):
-            for b in candidates[i + 1:]:
+            for b in candidates[i + 1 :]:
                 pair_key = tuple(sorted([str(a.id), str(b.id)]))
                 if pair_key in seen:
                     continue
@@ -55,7 +54,7 @@ class DuplicateDetectionService:
                     matches.append(match)
         return matches
 
-    def _compare_pair(self, a: Candidate, b: Candidate) -> Optional[DuplicateMatch]:
+    def _compare_pair(self, a: Candidate, b: Candidate) -> DuplicateMatch | None:
         if a.email and b.email and a.email.lower() == b.email.lower():
             return DuplicateMatch(str(a.id), str(b.id), 1.0, "email")
 

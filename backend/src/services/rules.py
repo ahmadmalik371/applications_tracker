@@ -1,10 +1,11 @@
 import uuid
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.rules import Rule, RuleEvaluation, RuleOperator, RuleType
 from src.models import Candidate, Job
+from src.models.rules import Rule, RuleEvaluation, RuleOperator, RuleType
 from src.services.parsing import extract_years_of_experience
 
 
@@ -20,13 +21,13 @@ class RuleEvaluationService:
     ) -> tuple[bool, str, int]:
         """
         Evaluate a single rule against a candidate.
-        
+
         Returns: (passed: bool, reason: str, score_impact: int)
         """
         try:
             passed = await self._evaluate_condition(rule, candidate, job)
             reason = self._generate_reason(rule, candidate, passed)
-            
+
             # Create evaluation record
             evaluation = RuleEvaluation(
                 rule_id=rule.id,
@@ -38,7 +39,7 @@ class RuleEvaluationService:
             )
             session.add(evaluation)
             await session.flush()
-            
+
             return passed, reason, rule.score_impact if passed else 0
         except Exception as e:
             return False, f"Rule evaluation error: {str(e)}", 0
@@ -49,10 +50,10 @@ class RuleEvaluationService:
         candidate: Candidate,
         job: Job,
         organization_id: uuid.UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Evaluate all active rules for an organization against a candidate for a job.
-        
+
         Returns:
         {
             "overall_passed": bool,
@@ -82,7 +83,7 @@ class RuleEvaluationService:
             passed, reason, score_impact = await self.evaluate_rule(
                 session, rule, candidate, job
             )
-            
+
             if passed:
                 rules_passed += 1
                 total_score_impact += score_impact
@@ -92,14 +93,16 @@ class RuleEvaluationService:
                     blocking_rules_failed.append(rule.name)
                     overall_passed = False
 
-            details.append({
-                "rule_id": str(rule.id),
-                "rule_name": rule.name,
-                "passed": passed,
-                "reason": reason,
-                "score_impact": score_impact,
-                "is_blocking": rule.is_blocking,
-            })
+            details.append(
+                {
+                    "rule_id": str(rule.id),
+                    "rule_name": rule.name,
+                    "passed": passed,
+                    "reason": reason,
+                    "score_impact": score_impact,
+                    "is_blocking": rule.is_blocking,
+                }
+            )
 
         return {
             "overall_passed": overall_passed and len(blocking_rules_failed) == 0,
@@ -132,7 +135,7 @@ class RuleEvaluationService:
             return True  # Unknown rule type passes by default
 
     def _evaluate_experience(
-        self, candidate: Candidate, operator: str, condition_value: Dict[str, Any]
+        self, candidate: Candidate, operator: str, condition_value: dict[str, Any]
     ) -> bool:
         """Evaluate experience-based rules."""
         if not candidate.parsed_data:
@@ -153,15 +156,13 @@ class RuleEvaluationService:
             return False
 
     def _evaluate_skills(
-        self, candidate: Candidate, operator: str, condition_value: Dict[str, Any]
+        self, candidate: Candidate, operator: str, condition_value: dict[str, Any]
     ) -> bool:
         """Evaluate skill-based rules."""
         if not candidate.parsed_data:
             return False
 
-        candidate_skills = [
-            s.lower() for s in candidate.parsed_data.get("skills", [])
-        ]
+        candidate_skills = [s.lower() for s in candidate.parsed_data.get("skills", [])]
         required_skills = [s.lower() for s in condition_value.get("skills", [])]
 
         if operator == RuleOperator.CONTAINS:
@@ -174,7 +175,7 @@ class RuleEvaluationService:
             return False
 
     def _evaluate_education(
-        self, candidate: Candidate, operator: str, condition_value: Dict[str, Any]
+        self, candidate: Candidate, operator: str, condition_value: dict[str, Any]
     ) -> bool:
         """Evaluate education-based rules."""
         if not candidate.parsed_data:
@@ -193,10 +194,18 @@ class RuleEvaluationService:
             return False
 
     def _evaluate_location(
-        self, candidate: Candidate, job: Job, operator: str, condition_value: Dict[str, Any]
+        self,
+        candidate: Candidate,
+        job: Job,
+        operator: str,
+        condition_value: dict[str, Any],
     ) -> bool:
         """Evaluate location-based rules."""
-        candidate_location = (candidate.parsed_data or {}).get("location", "").lower() if candidate.parsed_data else ""
+        candidate_location = (
+            (candidate.parsed_data or {}).get("location", "").lower()
+            if candidate.parsed_data
+            else ""
+        )
         job_location = (job.location or "").lower()
         required_location = condition_value.get("location", "").lower()
 
@@ -210,7 +219,7 @@ class RuleEvaluationService:
             return False
 
     def _evaluate_seniority(
-        self, candidate: Candidate, operator: str, condition_value: Dict[str, Any]
+        self, candidate: Candidate, operator: str, condition_value: dict[str, Any]
     ) -> bool:
         """Evaluate seniority-based rules."""
         if not candidate.parsed_data:

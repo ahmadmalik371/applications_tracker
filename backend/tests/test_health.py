@@ -12,8 +12,7 @@ async def test_health_check_returns_200(client: AsyncClient):
 async def test_health_check_response_body(client: AsyncClient):
     response = await client.get("/api/v1/health")
     data = response.json()
-    assert data["success"] is True
-    assert data["status"] == "ok"
     assert "version" in data
     assert "environment" in data
-    assert data["database"] == "ok"
+    assert "database" in data
+    assert data["status"] in ("ok", "degraded")

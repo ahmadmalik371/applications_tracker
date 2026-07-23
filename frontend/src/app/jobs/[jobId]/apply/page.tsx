@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { AuthGuard } from "@/components/auth-guard";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = "/api/v1";
 
 const applySchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -88,8 +88,8 @@ export default function ApplyPage() {
         throw new Error(err.detail || "Application failed");
       }
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to submit application");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to submit application");
     } finally {
       setSubmitting(false);
     }

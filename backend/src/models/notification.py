@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import Optional
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Integer, Boolean, ForeignKey, Text, DateTime
-from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
 
@@ -31,17 +30,21 @@ class Notification(BaseModel):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
-    channel: Mapped[str] = mapped_column(String(50), default=NotificationChannel.IN_APP.value, nullable=False)
+    channel: Mapped[str] = mapped_column(
+        String(50), default=NotificationChannel.IN_APP.value, nullable=False
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default=NotificationStatus.PENDING.value, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default=NotificationStatus.PENDING.value, nullable=False
+    )
     read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    metadata_: Mapped[Optional[dict]] = mapped_column(Text, nullable=True)  # JSON string
+    metadata_: Mapped[dict | None] = mapped_column(Text, nullable=True)  # JSON string
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class EmailTemplate(BaseModel):
@@ -55,5 +58,7 @@ class EmailTemplate(BaseModel):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    variables: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of variable names
+    variables: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON list of variable names
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

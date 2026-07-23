@@ -11,7 +11,6 @@ import {
   Clock,
   ChevronRight,
   AlertCircle,
-  UserPlus,
   CheckCircle2,
   Mail,
 } from "lucide-react";
@@ -21,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStats, useNotifications, useUnreadNotificationCount } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-import { AuthGuard } from "@/components/auth-guard";
 
 const PIPELINE_STAGES = [
   { key: "Applied", label: "Applied", color: "bg-sky-500" },
@@ -31,6 +29,8 @@ const PIPELINE_STAGES = [
   { key: "Hired", label: "Hired", color: "bg-emerald-500" },
   { key: "Rejected", label: "Rejected", color: "bg-rose-500" },
 ];
+
+const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Remote"];
 
 function DashboardContent() {
   const { data, isLoading, isError, refetch } = useDashboardStats();
@@ -176,14 +176,6 @@ function DashboardContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <AuthGuard>
-      <DashboardContent />
-    </AuthGuard>
   );
 }
 
@@ -510,4 +502,8 @@ function formatRelative(iso: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
   return date.toLocaleDateString();
+}
+
+export default function DashboardPage() {
+  return <DashboardContent />;
 }

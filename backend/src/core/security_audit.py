@@ -3,6 +3,7 @@
 Performs runtime security checks, input sanitization, and provides
 additional security hardening measures beyond the base implementation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -10,7 +11,6 @@ import re
 from typing import Any
 
 from fastapi import Request
-from starlette.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,9 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
@@ -111,7 +113,13 @@ def create_security_report() -> dict[str, Any]:
         },
         "authorization": {
             "rbac_enabled": True,
-            "roles": ["Super Admin", "Company Admin", "Recruiter", "Hiring Manager", "Candidate"],
+            "roles": [
+                "Super Admin",
+                "Company Admin",
+                "Recruiter",
+                "Hiring Manager",
+                "Candidate",
+            ],
             "tenant_isolation": "organization_id scoping",
         },
         "rate_limiting": {

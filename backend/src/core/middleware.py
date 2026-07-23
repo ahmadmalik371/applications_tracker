@@ -5,16 +5,16 @@ per identity (user id, org id, or client IP) and per scope (auth, upload, ai,
 search, reports, default). Responses include standard RateLimit headers and
 return HTTP 429 with Retry-After when exceeded.
 """
+
 from __future__ import annotations
 
 import logging
 import time
 import uuid
-from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
 
 from src.core.config import get_settings
 
@@ -23,6 +23,7 @@ settings = get_settings()
 
 try:
     import redis.asyncio as aioredis
+
     _HAS_REDIS = True
 except ImportError:
     _HAS_REDIS = False
@@ -66,7 +67,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app, redis_url: str = "redis://localhost:6379/0"):
         super().__init__(app)
-        self._redis: Optional[Any] = None
+        self._redis: Any | None = None
         self._redis_url = redis_url
         self._local: dict[str, list[float]] = {}
 

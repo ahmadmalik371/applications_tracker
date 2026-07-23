@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException, Security, status
@@ -46,9 +47,19 @@ async def get_current_user(
             detail="Invalid access token payload",
         )
 
-    user = await db.get(User, sub)
+    try:
+        user_id = uuid.UUID(sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token payload",
+        ) from None
+
+    user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
     return user
 
 

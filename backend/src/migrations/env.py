@@ -18,9 +18,7 @@ if config.config_file_name is not None:
 # Set the SQLAlchemy URL from our settings (override alembic.ini).
 # Escape '%' for ConfigParser interpolation.
 settings = get_settings()
-config.set_main_option(
-    "sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%")
-)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Add your model's MetaData object here for 'autogenerate' support
 target_metadata = Base.metadata

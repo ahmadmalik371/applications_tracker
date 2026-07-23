@@ -2,12 +2,11 @@
 Celery task for parsing uploaded resumes, extracting candidate info,
 scoring against job requirements, and updating the database.
 """
+
 import logging
 import uuid
-from typing import Optional
 
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from src.core.celery_app import celery_app
 from src.core.database import AsyncSessionLocal
@@ -82,7 +81,7 @@ def parse_resume_task(
     self,
     candidate_id: str,
     resume_url: str,
-    job_id: Optional[str] = None,
+    job_id: str | None = None,
 ):
     """
     Parse a candidate's resume, extract structured data, score against job,
@@ -104,7 +103,7 @@ def parse_resume_task(
 async def _parse_resume_async(
     candidate_id: str,
     resume_url: str,
-    job_id: Optional[str] = None,
+    job_id: str | None = None,
 ):
     """Async implementation of resume parsing."""
     async with AsyncSessionLocal() as db:
@@ -113,6 +112,7 @@ async def _parse_resume_async(
 
             # Get candidate
             from src.models import Candidate
+
             result = await db.execute(select(Candidate).where(Candidate.id == cid))
             candidate = result.scalar_one_or_none()
             if not candidate:
@@ -131,6 +131,7 @@ async def _parse_resume_async(
 
             # Update candidate with parsed data
             from src.services.candidates import update_candidate
+
             await update_candidate(
                 db,
                 cid,
@@ -144,6 +145,7 @@ async def _parse_resume_async(
             if job_id:
                 jid = uuid.UUID(job_id)
                 from src.models import Job
+
                 result = await db.execute(select(Job).where(Job.id == jid))
                 job = result.scalar_one_or_none()
                 if job:
@@ -153,11 +155,14 @@ async def _parse_resume_async(
                         "required_education": job.education_required or "",
                         "location": job.location or "",
                     }
-                    score, breakdown = _score_candidate_against_job(parsed_data, job_data)
+                    score, breakdown = _score_candidate_against_job(
+                        parsed_data, job_data
+                    )
 
                     # Update application with score
                     from src.models import Application
                     from src.models.application import ApplicationStage
+
                     result = await db.execute(
                         select(Application)
                         .where(Application.candidate_id == cid)
@@ -171,6 +176,7 @@ async def _parse_resume_async(
 
             # Create notification for recruiters
             from src.services.notification import NotificationService
+
             notif_service = NotificationService()
             await notif_service.create_notification(
                 db,
@@ -184,7 +190,8 @@ async def _parse_resume_async(
 
             logger.info(
                 "Parsed resume for candidate %s (score=%s)",
-                candidate_id, score,
+                candidate_id,
+                score,
             )
 
             return {

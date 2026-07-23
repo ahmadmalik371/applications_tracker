@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,19 +15,23 @@ class SubscriptionService:
     but no payment gateway integration is wired up yet.
     """
 
-    async def get_plan(self, session: AsyncSession, plan_name: str) -> Optional[SaaSPlan]:
-        result = await session.execute(select(SaaSPlan).where(SaaSPlan.name == plan_name))
+    async def get_plan(self, session: AsyncSession, plan_name: str) -> SaaSPlan | None:
+        result = await session.execute(
+            select(SaaSPlan).where(SaaSPlan.name == plan_name)
+        )
         return result.scalar_one_or_none()
 
     async def list_plans(self, session: AsyncSession) -> list[SaaSPlan]:
         result = await session.execute(
-            select(SaaSPlan).where(SaaSPlan.is_active == True).order_by(SaaSPlan.price_cents)
+            select(SaaSPlan)
+            .where(SaaSPlan.is_active == True)
+            .order_by(SaaSPlan.price_cents)
         )
         return list(result.scalars().all())
 
     async def get_subscription(
         self, session: AsyncSession, organization_id: uuid.UUID
-    ) -> Optional[Subscription]:
+    ) -> Subscription | None:
         result = await session.execute(
             select(Subscription)
             .where(Subscription.organization_id == organization_id)
@@ -44,8 +47,8 @@ class SubscriptionService:
         organization_id: uuid.UUID,
         plan_id: uuid.UUID,
         status: str = SubscriptionStatus.ACTIVE.value,
-        stripe_subscription_id: Optional[str] = None,
-        stripe_customer_id: Optional[str] = None,
+        stripe_subscription_id: str | None = None,
+        stripe_customer_id: str | None = None,
     ) -> Subscription:
         sub = Subscription(
             organization_id=organization_id,
@@ -79,7 +82,10 @@ class SubscriptionService:
 
         limits = {
             "users": (plan.max_users, sub.usage_users),
-            "resume_processing": (plan.max_resume_processing, sub.usage_resume_processing),
+            "resume_processing": (
+                plan.max_resume_processing,
+                sub.usage_resume_processing,
+            ),
             "ai_requests": (plan.max_ai_requests, sub.usage_ai_requests),
             "storage_mb": (plan.max_storage_mb, sub.usage_storage_mb),
         }
@@ -94,7 +100,7 @@ class SubscriptionService:
         organization_id: uuid.UUID,
         resource: str,
         amount: int = 1,
-    ) -> Optional[Subscription]:
+    ) -> Subscription | None:
         sub = await self.get_subscription(session, organization_id)
         if not sub:
             return None

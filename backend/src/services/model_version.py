@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
 
-from sqlalchemy import select, func, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.ai import ModelVersion, ModelEvaluation
+from src.models.ai import ModelEvaluation, ModelVersion
 
 
 class ModelVersionService:
@@ -19,10 +19,10 @@ class ModelVersionService:
         *,
         name: str,
         version: str,
-        description: Optional[str] = None,
-        trained_at: Optional[datetime] = None,
-        metrics: Optional[dict] = None,
-        config: Optional[dict] = None,
+        description: str | None = None,
+        trained_at: datetime | None = None,
+        metrics: dict | None = None,
+        config: dict | None = None,
     ) -> ModelVersion:
         mv = ModelVersion(
             name=name,
@@ -40,35 +40,45 @@ class ModelVersionService:
     async def list_versions(
         self, session: AsyncSession, skip: int = 0, limit: int = 50
     ) -> tuple[Sequence[ModelVersion], int]:
-        total = (await session.execute(select(func.count(ModelVersion.id)))).scalar_one()
+        total = (
+            await session.execute(select(func.count(ModelVersion.id)))
+        ).scalar_one()
         rows = (
-            await session.execute(
-                select(ModelVersion).order_by(ModelVersion.created_at.desc())
-                .offset(skip).limit(limit)
+            (
+                await session.execute(
+                    select(ModelVersion)
+                    .order_by(ModelVersion.created_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return rows, total
 
-    async def get_active(self, session: AsyncSession) -> Optional[ModelVersion]:
+    async def get_active(self, session: AsyncSession) -> ModelVersion | None:
         result = await session.execute(
             select(ModelVersion).where(ModelVersion.is_active == True).limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def deploy(self, session: AsyncSession, version_id: uuid.UUID) -> Optional[ModelVersion]:
+    async def deploy(
+        self, session: AsyncSession, version_id: uuid.UUID
+    ) -> ModelVersion | None:
         mv = await session.get(ModelVersion, version_id)
         if not mv:
             return None
-        await session.execute(
-            update(ModelVersion).values(is_active=False)
-        )
+        await session.execute(update(ModelVersion).values(is_active=False))
         mv.is_active = True
-        mv.deployed_at = datetime.now(timezone.utc)
+        mv.deployed_at = datetime.now(UTC)
         await session.commit()
         await session.refresh(mv)
         return mv
 
-    async def rollback(self, session: AsyncSession, version_id: uuid.UUID) -> Optional[ModelVersion]:
+    async def rollback(
+        self, session: AsyncSession, version_id: uuid.UUID
+    ) -> ModelVersion | None:
         """Rollback to a previous model version by activating it."""
         return await self.deploy(session, version_id)
 
@@ -77,14 +87,14 @@ class ModelVersionService:
         session: AsyncSession,
         *,
         model_version_id: uuid.UUID,
-        precision: Optional[float] = None,
-        recall: Optional[float] = None,
-        f1: Optional[float] = None,
-        roc_auc: Optional[float] = None,
-        map_at_k: Optional[float] = None,
-        ndcg: Optional[float] = None,
-        latency_ms: Optional[float] = None,
-        notes: Optional[dict] = None,
+        precision: float | None = None,
+        recall: float | None = None,
+        f1: float | None = None,
+        roc_auc: float | None = None,
+        map_at_k: float | None = None,
+        ndcg: float | None = None,
+        latency_ms: float | None = None,
+        notes: dict | None = None,
     ) -> ModelEvaluation:
         ev = ModelEvaluation(
             model_version_id=model_version_id,

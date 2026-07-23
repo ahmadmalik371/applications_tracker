@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.audit import AuditLog
@@ -19,12 +19,12 @@ class AuditService:
         *,
         action: str,
         resource_type: str,
-        user_id: Optional[uuid.UUID] = None,
-        organization_id: Optional[uuid.UUID] = None,
-        resource_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        metadata: Optional[dict] = None,
+        user_id: uuid.UUID | None = None,
+        organization_id: uuid.UUID | None = None,
+        resource_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        metadata: dict | None = None,
     ) -> AuditLog:
         entry = AuditLog(
             user_id=user_id,
@@ -35,7 +35,7 @@ class AuditService:
             ip_address=ip_address,
             user_agent=user_agent,
             event_metadata=metadata,
-            occurred_at=datetime.now(timezone.utc),
+            occurred_at=datetime.now(UTC),
         )
         session.add(entry)
         await session.commit()
@@ -46,12 +46,12 @@ class AuditService:
         self,
         session: AsyncSession,
         *,
-        organization_id: Optional[uuid.UUID] = None,
-        user_id: Optional[uuid.UUID] = None,
-        action: Optional[str] = None,
-        resource_type: Optional[str] = None,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        organization_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[Sequence[AuditLog], int]:
@@ -79,10 +79,14 @@ class AuditService:
 
         total = (await session.execute(count_stmt)).scalar_one()
         rows = (
-            await session.execute(
-                stmt.order_by(AuditLog.occurred_at.desc()).offset(skip).limit(limit)
+            (
+                await session.execute(
+                    stmt.order_by(AuditLog.occurred_at.desc()).offset(skip).limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return rows, total
 
 

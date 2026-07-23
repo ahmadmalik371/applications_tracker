@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -7,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_current_user, get_db
 from src.models import User
+from src.services.bias_monitoring import bias_monitoring_service
 from src.services.feedback import feedback_service
 from src.services.model_version import model_version_service
-from src.services.bias_monitoring import bias_monitoring_service
 
 router = APIRouter(prefix="/ml", tags=["ML Management"])
 
@@ -17,10 +16,10 @@ router = APIRouter(prefix="/ml", tags=["ML Management"])
 # --- Feedback ---
 class FeedbackIn(BaseModel):
     rating: str
-    candidate_id: Optional[str] = None
-    job_id: Optional[str] = None
-    ranking_score: Optional[float] = None
-    note: Optional[str] = None
+    candidate_id: str | None = None
+    job_id: str | None = None
+    ranking_score: float | None = None
+    note: str | None = None
 
 
 @router.post("/feedback")
@@ -56,7 +55,9 @@ async def list_feedback(
         "total": total,
         "items": [
             {
-                "id": str(r.id), "rating": r.rating, "note": r.note,
+                "id": str(r.id),
+                "rating": r.rating,
+                "note": r.note,
                 "candidate_id": str(r.candidate_id) if r.candidate_id else None,
                 "job_id": str(r.job_id) if r.job_id else None,
                 "ranking_score": r.ranking_score,
@@ -79,19 +80,19 @@ async def feedback_summary(
 class ModelVersionIn(BaseModel):
     name: str
     version: str
-    description: Optional[str] = None
-    metrics: Optional[dict] = None
-    config: Optional[dict] = None
+    description: str | None = None
+    metrics: dict | None = None
+    config: dict | None = None
 
 
 class EvaluationIn(BaseModel):
-    precision: Optional[float] = None
-    recall: Optional[float] = None
-    f1: Optional[float] = None
-    roc_auc: Optional[float] = None
-    map_at_k: Optional[float] = None
-    ndcg: Optional[float] = None
-    latency_ms: Optional[float] = None
+    precision: float | None = None
+    recall: float | None = None
+    f1: float | None = None
+    roc_auc: float | None = None
+    map_at_k: float | None = None
+    ndcg: float | None = None
+    latency_ms: float | None = None
 
 
 @router.get("/models")
@@ -106,7 +107,9 @@ async def list_models(
         "total": total,
         "items": [
             {
-                "id": str(m.id), "name": m.name, "version": m.version,
+                "id": str(m.id),
+                "name": m.name,
+                "version": m.version,
                 "is_active": m.is_active,
                 "deployed_at": m.deployed_at.isoformat() if m.deployed_at else None,
                 "metrics": m.metrics,
@@ -123,8 +126,12 @@ async def create_model(
     db: AsyncSession = Depends(get_db),
 ):
     mv = await model_version_service.create_version(
-        db, name=req.name, version=req.version,
-        description=req.description, metrics=req.metrics, config=req.config,
+        db,
+        name=req.name,
+        version=req.version,
+        description=req.description,
+        metrics=req.metrics,
+        config=req.config,
     )
     return {"id": str(mv.id), "name": mv.name, "version": mv.version}
 
@@ -161,9 +168,14 @@ async def add_evaluation(
     db: AsyncSession = Depends(get_db),
 ):
     ev = await model_version_service.add_evaluation(
-        db, model_version_id=model_id,
-        precision=req.precision, recall=req.recall, f1=req.f1,
-        roc_auc=req.roc_auc, map_at_k=req.map_at_k, ndcg=req.ndcg,
+        db,
+        model_version_id=model_id,
+        precision=req.precision,
+        recall=req.recall,
+        f1=req.f1,
+        roc_auc=req.roc_auc,
+        map_at_k=req.map_at_k,
+        ndcg=req.ndcg,
         latency_ms=req.latency_ms,
     )
     return {"id": str(ev.id), "model_version_id": str(ev.model_version_id)}
@@ -179,9 +191,14 @@ async def list_evaluations(
     return {
         "items": [
             {
-                "id": str(e.id), "precision": e.precision, "recall": e.recall,
-                "f1": e.f1, "roc_auc": e.roc_auc, "map_at_k": e.map_at_k,
-                "ndcg": e.ndcg, "latency_ms": e.latency_ms,
+                "id": str(e.id),
+                "precision": e.precision,
+                "recall": e.recall,
+                "f1": e.f1,
+                "roc_auc": e.roc_auc,
+                "map_at_k": e.map_at_k,
+                "ndcg": e.ndcg,
+                "latency_ms": e.latency_ms,
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
             for e in rows
@@ -196,7 +213,7 @@ class BiasReportIn(BaseModel):
     group_b: str
     rate_a: float
     rate_b: float
-    threshold: Optional[float] = None
+    threshold: float | None = None
 
 
 @router.post("/bias-reports")
@@ -207,23 +224,31 @@ async def create_bias_report(
 ):
     if req.metric_type == "demographic_parity":
         report = await bias_monitoring_service.compute_demographic_parity(
-            db, group_a=req.group_a, group_b=req.group_b,
-            rate_a=req.rate_a, rate_b=req.rate_b,
+            db,
+            group_a=req.group_a,
+            group_b=req.group_b,
+            rate_a=req.rate_a,
+            rate_b=req.rate_b,
             organization_id=user.organization_id,
             threshold=req.threshold or bias_monitoring_service.DEFAULT_THRESHOLD,
         )
     elif req.metric_type == "disparate_impact":
         report = await bias_monitoring_service.compute_disparate_impact(
-            db, group_a=req.group_a, group_b=req.group_b,
-            rate_a=req.rate_a, rate_b=req.rate_b,
+            db,
+            group_a=req.group_a,
+            group_b=req.group_b,
+            rate_a=req.rate_a,
+            rate_b=req.rate_b,
             organization_id=user.organization_id,
             threshold=req.threshold or 0.8,
         )
     else:
         raise HTTPException(status_code=400, detail="Unknown metric type")
     return {
-        "id": str(report.id), "metric_type": report.metric_type,
-        "metric_value": report.metric_value, "is_flagged": report.is_flagged,
+        "id": str(report.id),
+        "metric_type": report.metric_type,
+        "metric_value": report.metric_value,
+        "is_flagged": report.is_flagged,
     }
 
 
@@ -236,16 +261,22 @@ async def list_bias_reports(
     db: AsyncSession = Depends(get_db),
 ):
     rows, total = await bias_monitoring_service.list_reports(
-        db, organization_id=user.organization_id,
-        flagged_only=flagged_only, skip=skip, limit=limit,
+        db,
+        organization_id=user.organization_id,
+        flagged_only=flagged_only,
+        skip=skip,
+        limit=limit,
     )
     return {
         "total": total,
         "items": [
             {
-                "id": str(r.id), "metric_type": r.metric_type,
-                "metric_value": r.metric_value, "group_a": r.group_a,
-                "group_b": r.group_b, "is_flagged": r.is_flagged,
+                "id": str(r.id),
+                "metric_type": r.metric_type,
+                "metric_value": r.metric_value,
+                "group_a": r.group_a,
+                "group_b": r.group_b,
+                "is_flagged": r.is_flagged,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
             }
             for r in rows

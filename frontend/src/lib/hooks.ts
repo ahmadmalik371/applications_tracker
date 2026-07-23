@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "./api-client";
 
 export interface DashboardStats {
@@ -137,5 +137,65 @@ export function useRankingForJob(jobId: string | null, limit = 10) {
       return data;
     },
     enabled: !!jobId,
+  });
+}
+
+export interface Notification {
+  id: string;
+  organization_id: string;
+  user_id: string | null;
+  channel: string;
+  title: string;
+  message: string;
+  status: string;
+  read: boolean;
+  created_at: string | null;
+}
+
+export function useNotifications(limit = 20) {
+  return useQuery<Notification[]>({
+    queryKey: ["notifications", limit],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Notification[]>(
+        "/notifications",
+        { params: { limit } }
+      );
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useUnreadCount() {
+  return useQuery<{ unread: number }>({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ unread: number }>(
+        "/notifications/unread-count"
+      );
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export interface JobCreateInput {
+  title: string;
+  description?: string;
+  location?: string;
+  employment_type?: string;
+}
+
+export function useCreateJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: JobCreateInput) => {
+      const { data } = await apiClient.post("/candidates/jobs", input);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
   });
 }
