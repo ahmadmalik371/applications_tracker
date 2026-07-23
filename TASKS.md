@@ -218,29 +218,29 @@ Use this checklist to track the implementation status of the ATS roadmap.
 ### Search & Ranking
 - [x] Add embedding generation and semantic matching services.
 - [x] Add candidate-to-job and candidate-to-candidate similarity search flows.
-- [ ] Implement configurable business rules for screening.
-- [ ] Implement feature extraction and ranking model integration.
-- [ ] Add explainable AI result generation and recruiter-facing insights.
+- [x] Implement configurable business rules for screening.
+- [x] Implement feature extraction and ranking model integration.
+- [x] Add explainable AI result generation and recruiter-facing insights.
 
 ### Recruiter Experience
-- [ ] Build recruiter dashboard widgets and analytics summaries.
-- [ ] Build candidate detail page with score, timeline, notes, and actions.
-- [ ] Implement resume viewer with metadata and highlighting.
-- [ ] Implement candidate comparison experience.
-- [ ] Implement hiring workflow and Kanban board transitions.
-- [ ] Implement interview scheduling and feedback flows.
-- [ ] Implement recruiter notes and candidate tagging.
+- [x] Build recruiter dashboard widgets and analytics summaries.
+- [x] Build candidate detail page with score, timeline, notes, and actions.
+- [x] Implement resume viewer with metadata and highlighting.
+- [x] Implement candidate comparison experience.
+- [x] Implement hiring workflow and Kanban board transitions.
+- [x] Implement interview scheduling and feedback flows.
+- [x] Implement recruiter notes and candidate tagging.
 
 ### Communication & Reporting
-- [ ] Implement notification service with email and in-app delivery.
-- [ ] Implement email template management.
-- [ ] Implement real-time WebSocket updates.
-- [ ] Implement reporting and scheduled exports.
+- [x] Implement notification service with email and in-app delivery.
+- [x] Implement email template management.
+- [x] Implement real-time WebSocket updates.
+- [x] Implement reporting and scheduled exports.
 
 ### Validation
 - [ ] Add end-to-end tests for hiring workflow and candidate ranking.
 - [ ] Add UI tests for recruiter dashboard and Kanban interactions.
-- [ ] Add documentation for deployment, configuration, and operational monitoring.
+- [x] Add documentation for deployment, configuration, and operational monitoring.
 
 ---
 
@@ -261,27 +261,27 @@ Use this checklist to track the implementation status of the ATS roadmap.
 - [x] Recruiter Features Phase 1 (tags, notes, versions)
 
 ### In Progress 🔄
-- [ ] Interview management module
-- [ ] Dashboard aggregation endpoints
-- [ ] Candidate comparison API
+- [ ] End-to-end tests (hiring workflow + candidate ranking)
+- [ ] UI tests (recruiter dashboard + Kanban)
 
 ### Planned 📋
-- [ ] Frontend: Recruiter Dashboard UI
-- [ ] Frontend: Candidate Detail Page UI
-- [ ] Frontend: Resume Viewer UI
-- [ ] Frontend: Candidate Comparison UI
-- [ ] Frontend: Kanban Board with drag-and-drop
-- [ ] Notification Service (email, in-app, WebSocket)
-- [ ] Email Template Management
-- [ ] Real-time Updates (WebSocket integration)
-- [ ] Analytics & Reporting
-- [ ] End-to-end tests and documentation
+- [ ] Real LLM embedding model integration (OpenAI / HuggingFace)
+- [ ] OCR support for scanned resumes
+- [ ] Advanced NLP for skill extraction
+- [ ] Candidate portal (self-service)
 
 ---
 
 ## Latest Git Commits
 
 Recent implementation includes:
+- fix: remove duplicate getToken declaration in candidate detail page
+- feat: add email template management UI with CRUD + variable preview
+- feat: add real-time WebSocket notification hook with auto-reconnect
+- feat: add WebSocketProvider to dashboard layout for live notifications
+- feat: add Email Templates to sidebar navigation
+- feat: add interview management module
+- feat: add dashboard aggregation endpoints
 - feat: add recruiter features (tags and notes)
 - feat: add explainable AI insights for candidate-job matches
 - feat: add feature extraction and AI ranking engine

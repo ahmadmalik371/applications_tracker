@@ -14,7 +14,8 @@ import {
   MessageSquare,
   BarChart2,
   Bell,
-  Shield
+  Shield,
+  Mail,
 } from "lucide-react";
 
 const navigation = [
@@ -26,6 +27,7 @@ const navigation = [
   { name: "AI Assistant", href: "/dashboard/ai-assistant", icon: MessageSquare },
   { name: "Search", href: "/dashboard/search", icon: Search },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
+  { name: "Email Templates", href: "/dashboard/email-templates", icon: Mail },
   { name: "Activity Log", href: "/dashboard/activity", icon: Shield },
 ];
 

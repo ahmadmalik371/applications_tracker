@@ -36,7 +36,7 @@ export default function NewJobPage() {
       await apiClient.post("/jobs", values);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to create job.");
+      setError(err?.response?.data?.error?.message || "Failed to create job.");
     }
   };
 

@@ -7,9 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AuthGuard } from "@/components/auth-guard";
-import { useAuth } from "@/lib/auth-context";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+import apiClient from "@/lib/api-client";
 
 interface Job {
   id: string;
@@ -22,8 +20,8 @@ interface Job {
   employment_type: string | null;
   status: string;
   created_at: string | null;
-  applications_count?: number; // Added from API or mock
-  avg_ai_match?: number; // Added from API or mock
+  applications_count?: number;
+  avg_ai_match?: number;
   created_by_id?: string;
 }
 
@@ -37,39 +35,21 @@ export default function ActiveJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const token = await getToken();
-        if (!token) throw new Error("No token");
-
-        const res = await fetch(`${API_BASE}/jobs`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (!res.ok) throw new Error("Failed to fetch jobs");
-        
-        const data = await res.json();
-        
-        // Mock applications count and AI match for now if backend doesn't supply it
-        const enhancedData = data.map((job: Job) => ({
-          ...job,
-          applications_count: job.applications_count ?? Math.floor(Math.random() * 50),
-          avg_ai_match: job.avg_ai_match ?? Math.floor(Math.random() * 40) + 60,
-        }));
-        
-        setJobs(enhancedData);
-      } catch (err) {
-        setError("Failed to load jobs");
+        const { data } = await apiClient.get<Job[]>("/jobs");
+        setJobs(data);
+      } catch (err: any) {
+        setError(err?.response?.data?.error?.message || "Failed to load jobs");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchJobs();
-  }, [getToken]);
+  }, []);
 
   if (loading) {
     return (
@@ -119,7 +99,7 @@ export default function ActiveJobsPage() {
                         {job.status}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600">
                       {job.department && (
                         <span className="flex items-center gap-1.5"><Building className="h-4 w-4" /> {job.department}</span>
@@ -138,20 +118,20 @@ export default function ActiveJobsPage() {
                         <span className="flex items-center gap-1.5 text-amber-600"><CalendarDays className="h-4 w-4" /> Deadline: {formatDate(job.deadline)}</span>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-6 mt-4 p-3 bg-zinc-50 rounded-lg">
                       <div className="flex flex-col">
                         <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Applications</span>
-                        <span className="text-lg font-semibold text-zinc-900">{job.applications_count}</span>
+                        <span className="text-lg font-semibold text-zinc-900">{job.applications_count ?? 0}</span>
                       </div>
                       <div className="h-8 w-px bg-zinc-200"></div>
                       <div className="flex flex-col">
                         <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Avg AI Match</span>
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-2 bg-zinc-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500" style={{ width: `${job.avg_ai_match}%` }}></div>
+                            <div className="h-full bg-emerald-500" style={{ width: `${job.avg_ai_match ?? 0}%` }}></div>
                           </div>
-                          <span className="text-sm font-semibold text-zinc-900">{job.avg_ai_match}%</span>
+                          <span className="text-sm font-semibold text-zinc-900">{job.avg_ai_match ?? 0}%</span>
                         </div>
                       </div>
                       <div className="h-8 w-px bg-zinc-200"></div>
@@ -161,7 +141,7 @@ export default function ActiveJobsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col gap-2 w-full md:w-auto">
                     <Link href={`/dashboard/jobs/${job.id}`}>
                       <Button className="w-full gap-2 bg-zinc-900 text-white hover:bg-zinc-800">

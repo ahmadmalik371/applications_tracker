@@ -85,7 +85,7 @@ export function useJobs(skip = 0, limit = 50) {
   return useQuery<JobSummary[]>({
     queryKey: ["jobs", skip, limit],
     queryFn: async () => {
-      const { data } = await apiClient.get<JobSummary[]>("/candidates/jobs", {
+      const { data } = await apiClient.get<JobSummary[]>("/jobs", {
         params: { skip, limit },
       });
       return data;

@@ -40,7 +40,7 @@ export default function LoginPage() {
       await login(data.email, data.password);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Login failed. Please try again.");
+      setError(err?.response?.data?.error?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
