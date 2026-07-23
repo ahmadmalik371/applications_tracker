@@ -170,7 +170,7 @@ export function TopHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.email}</p>
-                <p className="text-xs leading-none text-zinc-500">{user?.role}</p>
+                <p className="text-xs leading-none text-zinc-500">{user?.role?.name ?? "User"}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

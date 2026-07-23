@@ -140,45 +140,6 @@ export function useRankingForJob(jobId: string | null, limit = 10) {
   });
 }
 
-export interface Notification {
-  id: string;
-  organization_id: string;
-  user_id: string | null;
-  channel: string;
-  title: string;
-  message: string;
-  status: string;
-  read: boolean;
-  created_at: string | null;
-}
-
-export function useNotifications(limit = 20) {
-  return useQuery<Notification[]>({
-    queryKey: ["notifications", limit],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Notification[]>(
-        "/notifications",
-        { params: { limit } }
-      );
-      return data;
-    },
-    refetchInterval: 30_000,
-  });
-}
-
-export function useUnreadCount() {
-  return useQuery<{ unread: number }>({
-    queryKey: ["notifications", "unread-count"],
-    queryFn: async () => {
-      const { data } = await apiClient.get<{ unread: number }>(
-        "/notifications/unread-count"
-      );
-      return data;
-    },
-    refetchInterval: 30_000,
-  });
-}
-
 export interface JobCreateInput {
   title: string;
   description?: string;
